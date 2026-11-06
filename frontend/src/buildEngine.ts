@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import type { BuildEngine } from './types'
 
 export function normalizeBuildEngine(value: unknown): BuildEngine {
@@ -5,5 +6,5 @@ export function normalizeBuildEngine(value: unknown): BuildEngine {
 }
 
 export function buildEngineLabel(value: unknown) {
-  return normalizeBuildEngine(value) === 'LOCAL' ? '本机构建' : 'GitHub Actions'
+  return normalizeBuildEngine(value) === 'LOCAL' ? tUi('本机构建') : 'GitHub Actions'
 }

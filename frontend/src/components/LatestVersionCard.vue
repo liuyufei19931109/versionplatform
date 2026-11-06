@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Plus, Refresh } from '@element-plus/icons-vue'
@@ -22,8 +24,8 @@ const selectedId = computed({
 })
 const future = computed(() => Boolean(version.value && version.value.versionDate > today.value))
 const selectionHint = computed(() => {
-  if (version.value?.id !== defaultVersion.value?.id) return '已切换查看版本，模块与打包入口随所选版本切换。'
-  return future.value ? '当前轮次已完成，或尚无已到期的未完成版本，展示最近的未来版本。' : '默认展示今天或之前最近的未完成版本，可切换查看其他版本。'
+  if (version.value?.id !== defaultVersion.value?.id) return tUi('已切换查看版本，模块与打包入口随所选版本切换。')
+  return future.value ? tUi('当前轮次已完成，或尚无已到期的未完成版本，展示最近的未来版本。') : tUi('默认展示今天或之前最近的未完成版本，可切换查看其他版本。')
 })
 let timer: number | undefined, disposed = false
 async function refresh() {
@@ -38,12 +40,12 @@ async function refresh() {
     const previousStates = new Map(versions.value.map(item => [item.id,item.lifecycleState]))
     const chosenWasCompleted = chosenId.value ? previousStates.get(chosenId.value) === 'COMPLETED' : false
     versions.value = (Array.isArray(value) ? value : []).filter(item => item?.id && typeof item.versionDate === 'string' && Array.isArray(item.items)).map(item => ({...item,lifecycleState:states?states.get(item.id)||'OPEN' as const:previousStates.get(item.id)})).sort((a, b) => b.versionDate.localeCompare(a.versionDate))
-    completionStateError.value = states ? '' : previousStates.size ? '收尾状态暂时无法读取，沿用上次已知状态；新版本状态尚未确认。' : '收尾状态暂时无法读取，状态未知，先按日期展示版本供查看。'
+    completionStateError.value = states ? '' : previousStates.size ? tUi('收尾状态暂时无法读取，沿用上次已知状态；新版本状态尚未确认。') : tUi('收尾状态暂时无法读取，状态未知，先按日期展示版本供查看。')
     today.value = shanghaiToday()
     if (chosenId.value && (!versions.value.some(item => item.id === chosenId.value) || !chosenWasCompleted && versions.value.find(item => item.id === chosenId.value)?.lifecycleState === 'COMPLETED')) chosenId.value = null
     error.value = ''
   }
-  catch (e) { if (!disposed) error.value = errorText(e, '版本概览暂时无法读取') }
+  catch (e) { if (!disposed) error.value = errorText(e, tUi('版本概览暂时无法读取')) }
   finally { loading.value = false; if (timer) window.clearTimeout(timer); if (!disposed) timer = window.setTimeout(() => refresh(), versionBusy(version.value) ? 3000 : 30000) }
 }
 function open(add = false) { if (version.value) router.push({ path: `/versions/${version.value.id}`, query: add ? { add: '1' } : {} }) }
@@ -53,27 +55,27 @@ defineExpose({ refresh })
 </script>
 
 <template>
-  <section class="panel latest-version-card" aria-label="版本概览">
+  <section class="panel latest-version-card" :aria-label="tUi('版本概览')">
     <div class="latest-version-heading">
-      <div><h3>版本概览</h3><p>查看所选版本的模块与开发分支</p></div>
+      <div><h3>{{ tUi('版本概览') }}</h3><p>{{ tUi('查看所选版本的模块与开发分支') }}</p></div>
       <div v-if="versions.length" class="version-picker">
-        <label for="dashboard-version">查看版本</label>
-        <el-select id="dashboard-version" v-model="selectedId" aria-label="切换版本" placeholder="切换查看历史版本" :loading="loading" popper-class="dashboard-version-options">
+        <label for="dashboard-version">{{ tUi('查看版本') }}</label>
+        <el-select id="dashboard-version" v-model="selectedId" :aria-label="tUi('切换版本')" :placeholder="tUi('切换查看历史版本')" :loading="loading" popper-class="dashboard-version-options">
           <el-option v-for="item in versions" :key="item.id" :value="item.id" :label="item.versionDate">
-            <span>{{item.versionDate}}</span><small>{{item.lifecycleState==='COMPLETED'?'已完成':item.id===defaultVersion?.id?'默认':item.versionDate>today?'未来版本':'历史版本'}}</small>
+            <span>{{item.versionDate}}</span><small>{{item.lifecycleState==='COMPLETED'?tUi('已完成'):item.id===defaultVersion?.id?tUi('默认'):item.versionDate>today?tUi('未来版本'):tUi('历史版本')}}</small>
           </el-option>
         </el-select>
       </div>
-      <div class="actions"><el-button v-if="version&&authUser?.admin&&canAddVersionServices(version)" :icon="Plus" :disabled="versionBusy(version)" @click="open(true)">补充服务</el-button><el-button v-if="version" link type="primary" @click="open()">查看版本<el-icon><ArrowRight/></el-icon></el-button><el-button v-else-if="authUser?.admin&&!error" type="primary" :icon="Plus" @click="router.push({path:'/versions',query:{create:'1'}})">创建版本</el-button></div>
+      <div class="actions"><el-button v-if="version&&authUser?.admin&&canAddVersionServices(version)" :icon="Plus" :disabled="versionBusy(version)" @click="open(true)">{{ tUi('补充服务') }}</el-button><el-button v-if="version" link type="primary" @click="open()">{{ tUi('查看版本') }}<el-icon><ArrowRight/></el-icon></el-button><el-button v-else-if="authUser?.admin&&!error" type="primary" :icon="Plus" @click="router.push({path:'/versions',query:{create:'1'}})">{{ tUi('创建版本') }}</el-button></div>
     </div>
-    <div v-if="error" class="latest-version-error" role="alert"><span>{{error}}{{version?'；下方为上次读取的结果。':''}}</span><el-button link type="primary" :icon="Refresh" :loading="loading" @click="refresh()">重新读取</el-button></div>
+    <div v-if="error" class="latest-version-error" role="alert"><span>{{error}}{{version?tUi('；下方为上次读取的结果。'):''}}</span><el-button link type="primary" :icon="Refresh" :loading="loading" @click="refresh()">{{ tUi('重新读取') }}</el-button></div>
     <p v-if="completionStateError&&!error" class="completion-state-note" role="status">{{completionStateError}}</p>
     <template v-if="version">
-      <div class="version-selection-note"><span>{{selectionHint}}</span><el-button v-if="chosenId&&version.id!==defaultVersion?.id" link type="primary" @click="chosenId=null">回到当前版本</el-button></div>
-      <div class="latest-version-meta"><time>{{version.versionDate}}</time><strong>{{version.branch}}</strong><el-tag v-if="version.lifecycleState==='COMPLETED'" size="small" type="success" effect="plain">已完成</el-tag><el-tag v-if="future" class="version-future-tag" size="small" type="info" effect="plain">即将到来</el-tag><span class="version-module-summary">{{versionSummary(version)}}</span></div>
+      <div class="version-selection-note"><span>{{selectionHint}}</span><el-button v-if="chosenId&&version.id!==defaultVersion?.id" link type="primary" @click="chosenId=null">{{ tUi('回到当前版本') }}</el-button></div>
+      <div class="latest-version-meta"><time>{{version.versionDate}}</time><strong>{{version.branch}}</strong><el-tag v-if="version.lifecycleState==='COMPLETED'" size="small" type="success" effect="plain">{{ tUi('已完成') }}</el-tag><el-tag v-if="future" class="version-future-tag" size="small" type="info" effect="plain">{{ tUi('即将到来') }}</el-tag><span class="version-module-summary">{{versionSummary(version)}}</span></div>
       <VersionServiceList :key="version.id" :items="version.items" :version-id="version.id" compact/>
     </template>
-    <div v-else-if="!error" class="latest-version-empty"><b>{{loading?'正在读取版本…':allCompleted?'当前版本已全部完成':'还没有创建版本'}}</b><p>{{allCompleted?(authUser?.admin?'可以创建下一版本，也可从上方切换查看已完成的历史版本。':'等待管理员创建下一版本，也可从上方切换查看已完成的历史版本。'):(authUser?.admin?'创建版本，统一为参与的服务建立 release 分支。':'admin 创建版本后，会在这里显示你有权限查看的服务和分支。')}}</p></div>
+    <div v-else-if="!error" class="latest-version-empty"><b>{{loading?tUi('正在读取版本…'):allCompleted?tUi('当前版本已全部完成'):tUi('还没有创建版本')}}</b><p>{{allCompleted?(authUser?.admin?tUi('可以创建下一版本，也可从上方切换查看已完成的历史版本。'):tUi('等待管理员创建下一版本，也可从上方切换查看已完成的历史版本。')):(authUser?.admin?tUi('创建版本，统一为参与的服务建立 release 分支。'):tUi('admin 创建版本后，会在这里显示你有权限查看的服务和分支。'))}}</p></div>
   </section>
 </template>
 

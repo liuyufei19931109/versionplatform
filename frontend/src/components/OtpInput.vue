@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { tUi } from '../i18n'
 
-const props = withDefaults(defineProps<{ modelValue: string; disabled?: boolean; autofocus?: boolean; label?: string }>(), { label: '6 位动态码' })
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+
+const props = defineProps<{ modelValue: string; disabled?: boolean; autofocus?: boolean; label?: string }>()
+const effectiveLabel = computed(() => props.label ?? tUi('6 位动态码'))
 const emit = defineEmits<{ 'update:modelValue': [value: string]; submit: [] }>()
 const fields = ref<HTMLInputElement[]>([])
 let resetFocus = false
@@ -34,8 +37,8 @@ function paste(index: number, event: ClipboardEvent) { event.preventDefault(); i
 </script>
 
 <template>
-  <div class="otp-input" role="group" :aria-label="label">
-    <input v-for="(_, index) in 6" :key="index" :ref="element => { if (element) fields[index] = element as HTMLInputElement }" :value="modelValue[index] || ''" :disabled="disabled" :autofocus="autofocus && index === 0" :aria-label="`${label}，第 ${index + 1} 位`" inputmode="numeric" pattern="[0-9]*" :autocomplete="index === 0 ? 'one-time-code' : 'off'" maxlength="6" type="text" @input="input(index, $event)" @keydown="key(index, $event)" @paste="paste(index, $event)" @focus="($event.target as HTMLInputElement).select()" />
+  <div class="otp-input" role="group" :aria-label="effectiveLabel">
+    <input v-for="(_, index) in 6" :key="index" :ref="element => { if (element) fields[index] = element as HTMLInputElement }" :value="modelValue[index] || ''" :disabled="disabled" :autofocus="autofocus && index === 0" :aria-label="tUi('{0}，第 {1} 位', effectiveLabel, index + 1)" inputmode="numeric" pattern="[0-9]*" :autocomplete="index === 0 ? 'one-time-code' : 'off'" maxlength="6" type="text" @input="input(index, $event)" @keydown="key(index, $event)" @paste="paste(index, $event)" @focus="($event.target as HTMLInputElement).select()" />
   </div>
 </template>
 

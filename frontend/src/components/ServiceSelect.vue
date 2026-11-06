@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import type { Service } from '../types'
 import ServiceIdentity from './ServiceIdentity.vue'
@@ -9,7 +11,7 @@ const selected = computed(() => props.services.find(service => String(service.id
 </script>
 
 <template>
-  <el-select :model-value="modelValue" :disabled="disabled" filterable size="large" class="service-select" popper-class="service-select-menu" placeholder="请选择目标服务" @update:model-value="emit('update:modelValue', String($event))">
+  <el-select :model-value="modelValue" :disabled="disabled" filterable size="large" class="service-select" popper-class="service-select-menu" :placeholder="tUi('请选择目标服务')" @update:model-value="emit('update:modelValue', String($event))">
     <template #label><ServiceIdentity v-if="selected" :service="selected"/><span v-else>{{modelValue}}</span></template>
     <el-option v-for="service in services" :key="service.id" :label="[service.name, service.code].filter(Boolean).join(' · ')" :value="String(service.id)"><ServiceIdentity :service="service"/></el-option>
   </el-select>

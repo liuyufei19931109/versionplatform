@@ -1,3 +1,4 @@
+const { withTranslations } = require('../test-support/i18n.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -9,7 +10,7 @@ const compiled = ts.transpile(fs.readFileSync(file, 'utf8'), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
 })
 const branding = {}
-new Function('exports', 'require', compiled)(branding, require)
+new Function('exports', 'require', compiled)(branding, withTranslations(require))
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64')
 const favicon = {}
 global.document = { querySelector: () => favicon }

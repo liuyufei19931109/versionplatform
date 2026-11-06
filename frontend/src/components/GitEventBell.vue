@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Bell, Close, RefreshRight } from '@element-plus/icons-vue'
@@ -49,35 +51,35 @@ function onPanelKeydown(event: KeyboardEvent) {
 <template>
   <el-popover v-if="available" v-model:visible="open" trigger="click" placement="bottom-end" :width="424" :show-arrow="false" :offset="12" popper-class="git-events-popover" :teleported="true" :persistent="false">
     <template #reference>
-      <button ref="trigger" type="button" class="git-bell" :class="{ 'is-open': open }" :aria-label="unread ? 'Git 动态，有未读更新' : 'Git 动态'" aria-haspopup="dialog" :aria-expanded="open" aria-controls="git-events-panel" title="Git 动态" data-testid="git-event-bell" @keydown.esc.stop="close">
+      <button ref="trigger" type="button" class="git-bell" :class="{ 'is-open': open }" :aria-label="unread ? tUi('Git 动态，有未读更新') : tUi('Git 动态')" aria-haspopup="dialog" :aria-expanded="open" aria-controls="git-events-panel" :title="tUi('Git 动态')" data-testid="git-event-bell" @keydown.esc.stop="close">
         <el-icon :size="20"><Bell /></el-icon><span v-if="unread" class="git-bell-dot" aria-hidden="true" />
       </button>
     </template>
     <section id="git-events-panel" ref="panel" class="git-events-panel" role="dialog" aria-modal="false" aria-labelledby="git-events-heading" tabindex="-1" @keydown="onPanelKeydown">
-      <header class="git-events-heading"><div><h2 id="git-events-heading">Git 动态</h2><p>最近 5 条推送 · 最新在前</p></div><button type="button" class="git-events-icon" aria-label="关闭 Git 动态" @click="close"><el-icon><Close /></el-icon></button></header>
-      <div v-if="newEvents && !snapshotLoading" class="git-events-new"><span>有新的代码推送</span><button type="button" @click="showLatest">查看最新动态</button></div>
-      <div v-if="snapshotLoading" class="git-events-state" role="status"><el-icon class="git-events-loading"><RefreshRight /></el-icon><span>正在读取代码动态…</span></div>
+      <header class="git-events-heading"><div><h2 id="git-events-heading">{{ tUi('Git 动态') }}</h2><p>{{ tUi('最近 5 条推送 · 最新在前') }}</p></div><button type="button" class="git-events-icon" :aria-label="tUi('关闭 Git 动态')" @click="close"><el-icon><Close /></el-icon></button></header>
+      <div v-if="newEvents && !snapshotLoading" class="git-events-new"><span>{{ tUi('有新的代码推送') }}</span><button type="button" @click="showLatest">{{ tUi('查看最新动态') }}</button></div>
+      <div v-if="snapshotLoading" class="git-events-state" role="status"><el-icon class="git-events-loading"><RefreshRight /></el-icon><span>{{ tUi('正在读取代码动态…') }}</span></div>
       <template v-else>
-        <div v-if="error" class="git-events-error" role="status"><span>{{ shown.length ? '暂时无法刷新，以下为上次读取的动态。' : '暂时无法读取 Git 动态，请重试。' }}</span><button type="button" @click="showLatest">重试</button></div>
-        <ol v-if="shown.length" ref="list" class="git-events-list" aria-label="最近的代码推送">
+        <div v-if="error" class="git-events-error" role="status"><span>{{ shown.length ? tUi('暂时无法刷新，以下为上次读取的动态。') : tUi('暂时无法读取 Git 动态，请重试。') }}</span><button type="button" @click="showLatest">{{ tUi('重试') }}</button></div>
+        <ol v-if="shown.length" ref="list" class="git-events-list" :aria-label="tUi('最近的代码推送')">
           <li v-for="event in shown" :key="event.id" class="git-event" :class="{ 'was-unread': event.unread }" :data-event-id="event.id">
             <div class="git-event-title"><strong :title="event.services.map(service => service.name).join('、')">{{ event.services.map(service => service.name).join('、') }}</strong><time :datetime="event.receivedAt" :title="formatTime(event.receivedAt)">{{ gitEventTime(event.receivedAt, shownAt) }}</time></div>
             <div class="git-event-branch"><span aria-hidden="true">⑂</span><b :title="event.branch">{{ event.branch }}</b></div>
-            <p class="git-event-summary" :title="event.summary">{{ event.summary || '未填写提交说明' }}</p>
-            <div class="git-event-meta"><span :title="event.actor">{{ event.actor || 'GitHub 用户' }} 推送</span><span>{{ shortCommit(event.commitId) }}</span></div>
+            <p class="git-event-summary" :title="event.summary">{{ event.summary || tUi('未填写提交说明') }}</p>
+            <div class="git-event-meta"><span :title="event.actor">{{ tUi('{0} 推送', event.actor || tUi('GitHub 用户')) }}</span><span>{{ shortCommit(event.commitId) }}</span></div>
             <div class="git-event-actions">
-              <a v-if="event.eventUrl" :href="event.eventUrl" target="_blank" rel="noopener noreferrer" :aria-label="`在 GitHub 查看 ${event.branch} 的提交`">查看 GitHub</a>
-              <button v-if="buildable(event).length === 1" type="button" class="git-event-build" @click="build(event, buildable(event)[0]!)">去打包</button>
+              <a v-if="event.eventUrl" :href="event.eventUrl" target="_blank" rel="noopener noreferrer" :aria-label="tUi('在 GitHub 查看 {0} 的提交', event.branch)">{{ tUi('查看 GitHub') }}</a>
+              <button v-if="buildable(event).length === 1" type="button" class="git-event-build" @click="build(event, buildable(event)[0]!)">{{ tUi('去打包') }}</button>
               <el-dropdown v-else-if="buildable(event).length > 1" trigger="click" @command="(id: number) => { const service = event.services.find(item => item.id === id); if (service) build(event, service) }">
-                <button type="button" class="git-event-build" aria-label="选择服务去打包">选择服务打包</button>
+                <button type="button" class="git-event-build" :aria-label="tUi('选择服务去打包')">{{ tUi('选择服务打包') }}</button>
                 <template #dropdown><el-dropdown-menu><el-dropdown-item v-for="service in buildable(event)" :key="service.id" :command="service.id">{{ service.name }}</el-dropdown-item></el-dropdown-menu></template>
               </el-dropdown>
             </div>
           </li>
         </ol>
-        <div v-else-if="!error" class="git-events-state"><el-icon :size="28"><Bell /></el-icon><strong>{{ feed.enabled ? '还没有代码推送' : 'GitHub 联动暂未启用' }}</strong><p>{{ feed.enabled ? '已接入服务有新推送后，会显示在这里。' : '启用 GitHub 联动后，这里会展示最新代码动态。' }}</p></div>
+        <div v-else-if="!error" class="git-events-state"><el-icon :size="28"><Bell /></el-icon><strong>{{ feed.enabled ? tUi('还没有代码推送') : tUi('GitHub 联动暂未启用') }}</strong><p>{{ feed.enabled ? tUi('已接入服务有新推送后，会显示在这里。') : tUi('启用 GitHub 联动后，这里会展示最新代码动态。') }}</p></div>
       </template>
-      <footer class="git-events-footer"><span><b v-if="hasOverflow" class="git-events-scroll-hint">共 {{ shown.length }} 条，可向下滚动查看</b>{{ readError || '选择“去打包”后，仍需核对并确认代码版本。' }}</span><button type="button" :disabled="loading || snapshotLoading" aria-label="刷新 Git 动态" @click="showLatest"><el-icon><RefreshRight /></el-icon></button></footer>
+      <footer class="git-events-footer"><span><b v-if="hasOverflow" class="git-events-scroll-hint">{{ tUi('共 {0} 条，可向下滚动查看', shown.length) }}</b>{{ readError || tUi('选择“去打包”后，仍需核对并确认代码版本。') }}</span><button type="button" :disabled="loading || snapshotLoading" :aria-label="tUi('刷新 Git 动态')" @click="showLatest"><el-icon><RefreshRight /></el-icon></button></footer>
     </section>
   </el-popover>
 </template>

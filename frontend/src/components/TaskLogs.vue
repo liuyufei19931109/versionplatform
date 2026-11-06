@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, nextTick, ref, watch } from 'vue'
 import { CopyDocument, Bottom, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -12,8 +14,13 @@ const panel = ref<HTMLElement>()
 const output = ref<HTMLElement>()
 const wrapLogs = ref(readLogWrap()), copied = ref(false)
 const failedSteps = computed(() => props.steps.filter(step => step.status === 'FAILED'))
-const failedLog = computed(() => failedSteps.value.map(step => `【${step.name || step.code || '失败步骤'}】\n${step.log || step.logText || '该步骤没有输出日志。'}`).join('\n') || String(props.task.errorMessage || '当前没有独立的失败步骤，请查看全部日志。'))
+const failedLog = computed(() => failedSteps.value.map(step => `【${step.name || step.code || tUi('失败步骤')}】\n${step.log || step.logText || tUi('该步骤没有输出日志。')}`).join('\n') || String(props.task.errorMessage || tUi('当前没有独立的失败步骤，请查看全部日志。')))
 const visibleLog = computed(() => props.task.status === 'FAILED' && filter.value === 'failed' ? failedLog.value : props.fallbackLog)
+// Copy backend output verbatim; translated step labels and empty-state messages are UI only.
+const copyableLog = computed(() => {
+  if (props.task.status !== 'FAILED' || filter.value !== 'failed') return props.task.rawLog || ''
+  return failedSteps.value.map(step => step.rawLog).filter(Boolean).join('\n') || String(props.task.errorMessage || '')
+})
 // Bound the DOM for multi-megabyte compiler output. Copy uses the complete unwrapped text.
 const linesPerPage = 500
 const page = ref(1)
@@ -41,9 +48,9 @@ function lineTone(value: string) {
 }
 async function copyLog() {
   try {
-    await copyLogText(visibleLog.value)
-    copied.value = true; ElMessage.success('已复制当前日志')
-  } catch { ElMessage.warning('复制失败，请在日志中选择文本复制') }
+    await copyLogText(copyableLog.value)
+    copied.value = true; ElMessage.success(tUi('已复制当前日志'))
+  } catch { ElMessage.warning(tUi('复制失败，请在日志中选择文本复制')) }
 }
 async function showFailure() {
   filter.value = 'failed'
@@ -55,20 +62,20 @@ defineExpose({ showFailure })
 </script>
 
 <template>
-  <section ref="panel" class="panel log-panel task-logs" tabindex="-1" aria-label="执行日志">
-    <div class="panel-title"><div><h3>执行日志</h3><span class="panel-subtitle">按步骤记录任务输出</span></div><el-tag :type="statusType(task.status)" size="small">{{statusLabel(task.status)}}</el-tag></div>
-    <div v-if="task.status === 'FAILED'" class="log-filter" role="group" aria-label="日志范围">
-      <button type="button" :aria-pressed="filter === 'all'" :class="{active:filter === 'all'}" @click="filter = 'all'">全部步骤</button>
-      <button type="button" :aria-pressed="filter === 'failed'" :class="{active:filter === 'failed'}" @click="filter = 'failed'">失败步骤</button>
-      <span>保留完整日志，可切换查看上下文</span>
+  <section ref="panel" class="panel log-panel task-logs" tabindex="-1" :aria-label="tUi('执行日志')">
+    <div class="panel-title"><div><h3>{{ tUi('执行日志') }}</h3><span class="panel-subtitle">{{ tUi('按步骤记录任务输出') }}</span></div><el-tag :type="statusType(task.status)" size="small">{{statusLabel(task.status)}}</el-tag></div>
+    <div v-if="task.status === 'FAILED'" class="log-filter" role="group" :aria-label="tUi('日志范围')">
+      <button type="button" :aria-pressed="filter === 'all'" :class="{active:filter === 'all'}" @click="filter = 'all'">{{ tUi('全部步骤') }}</button>
+      <button type="button" :aria-pressed="filter === 'failed'" :class="{active:filter === 'failed'}" @click="filter = 'failed'">{{ tUi('失败步骤') }}</button>
+      <span>{{ tUi('保留完整日志，可切换查看上下文') }}</span>
     </div>
-    <div class="log-toolbar"><span>任务 #{{task.id}}<span v-if="task.status==='RUNNING'" class="log-updating">持续更新</span></span><div><button type="button" :class="{active:wrapLogs}" :aria-pressed="wrapLogs" @click="wrapLogs=!wrapLogs">自动换行</button><button type="button" @click="copyLog" @mouseleave="copied=false" @blur="copied=false"><el-icon><Check v-if="copied"/><CopyDocument v-else/></el-icon>{{copied?'已复制':'复制日志'}}</button><button type="button" @click="scrollToEnd"><el-icon><Bottom/></el-icon>跳至末尾</button></div></div>
+    <div class="log-toolbar"><span>{{ tUi('任务 #{0}', task.id) }}<span v-if="task.status==='RUNNING'" class="log-updating">{{ tUi('持续更新') }}</span></span><div><button type="button" :class="{active:wrapLogs}" :aria-pressed="wrapLogs" @click="wrapLogs=!wrapLogs">{{ tUi('自动换行') }}</button><button type="button" @click="copyLog" :disabled="!copyableLog" @mouseleave="copied=false" @blur="copied=false"><el-icon><Check v-if="copied"/><CopyDocument v-else/></el-icon>{{copied?tUi('已复制'):tUi('复制日志')}}</button><button type="button" @click="scrollToEnd"><el-icon><Bottom/></el-icon>{{ tUi('跳至末尾') }}</button></div></div>
     <div v-if="pageCount > 1" class="log-pages">
-      <span>{{firstLine + 1}}–{{firstLine + pageLines.length}} 行 / 共 {{lines.length}} 行</span>
-      <button type="button" :disabled="page <= 1" @click="changePage(page - 1)">上一段</button>
-      <button type="button" :disabled="page >= pageCount" @click="changePage(page + 1)">下一段</button>
+      <span>{{ tUi('{0}–{1} 行 / 共 {2} 行', firstLine + 1, firstLine + pageLines.length, lines.length) }}</span>
+      <button type="button" :disabled="page <= 1" @click="changePage(page - 1)">{{ tUi('上一段') }}</button>
+      <button type="button" :disabled="page >= pageCount" @click="changePage(page + 1)">{{ tUi('下一段') }}</button>
     </div>
-    <div ref="output" class="log-box" :class="{'log-box--nowrap':!wrapLogs}" tabindex="0" aria-label="任务日志输出">
+    <div ref="output" class="log-box" :class="{'log-box--nowrap':!wrapLogs}" tabindex="0" :aria-label="tUi('任务日志输出')">
       <div class="log-lines">
         <div v-for="(line, index) in pageLines" :key="firstLine + index" class="task-log-line" :class="lineTone(line)">
           <span class="line-number" aria-hidden="true">{{firstLine + index + 1}}</span>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import type { Artifact } from '../types'
 import CommitHash from './CommitHash.vue'
 import { environmentLabel, timeParts } from '../ui'
@@ -9,14 +11,14 @@ function blocked(row: Record<string, unknown>) { return mobileArtifactEnvironmen
 </script>
 
 <template>
-  <p class="app-artifact-phone-hint">左右滑动查看分支、打包时间等信息</p>
+  <p class="app-artifact-phone-hint">{{ tUi('左右滑动查看分支、打包时间等信息') }}</p>
   <el-table :data="rows" class="app-artifact-table" :empty-text="emptyText" row-key="id">
-    <el-table-column label="安装包版本" min-width="180"><template #default="{row}"><b class="app-artifact-version">{{mobileVersionLabel(row)}}</b><span class="app-artifact-detail">{{row.buildMode==='DEBUG'?'Debug':row.buildMode==='RELEASE'?'Release':'未记录模式'}} · {{row.format==='APK'?'完整 APK':row.format||'安装包'}}</span></template></el-table-column>
-    <el-table-column label="打包完成" width="155"><template #default="{row}"><div class="app-artifact-time" :title="timeParts(row.createdAt).full"><b>{{timeParts(row.createdAt).time}}</b><span>{{timeParts(row.createdAt).date}}</span><small v-if="row.buildTaskId">构建 #{{row.buildTaskId}}</small></div></template></el-table-column>
-    <el-table-column label="分支 / Commit" min-width="205"><template #default="{row}"><b class="app-artifact-branch" :title="row.branch">{{row.branch||'未记录分支'}}</b><CommitHash :value="row.commitId"/></template></el-table-column>
-    <el-table-column v-if="showEnvironment" label="构建环境" width="135"><template #default="{row}"><el-tag v-if="row.buildEnvironmentName" size="small" effect="plain">{{environmentLabel(row.buildEnvironmentName)}}</el-tag><span v-else>环境未记录</span><small v-if="row._detailsUnavailable" class="app-artifact-detail">详情暂未读取</small></template></el-table-column>
-    <el-table-column label="打包人" width="105"><template #default="{row}">{{row.createdBy||'—'}}</template></el-table-column>
-    <el-table-column v-if="showDelivery" label="交付" width="115" fixed="right"><template #default="{row}"><el-button link type="primary" :disabled="!enabled||!!blocked(row)" :title="blocked(row)" @click="emit('deliver',row)">创建交付</el-button></template></el-table-column>
+    <el-table-column :label="tUi('安装包版本')" min-width="180"><template #default="{row}"><b class="app-artifact-version">{{mobileVersionLabel(row)}}</b><span class="app-artifact-detail">{{row.buildMode==='DEBUG'?'Debug':row.buildMode==='RELEASE'?'Release':tUi('未记录模式')}} · {{row.format==='APK'?tUi('完整 APK'):row.format||tUi('安装包')}}</span></template></el-table-column>
+    <el-table-column :label="tUi('打包完成')" width="155"><template #default="{row}"><div class="app-artifact-time" :title="timeParts(row.createdAt).full"><b>{{timeParts(row.createdAt).time}}</b><span>{{timeParts(row.createdAt).date}}</span><small v-if="row.buildTaskId">{{ tUi('构建 #{0}', row.buildTaskId) }}</small></div></template></el-table-column>
+    <el-table-column :label="tUi('分支 / Commit')" min-width="205"><template #default="{row}"><b class="app-artifact-branch" :title="row.branch">{{row.branch||tUi('未记录分支')}}</b><CommitHash :value="row.commitId"/></template></el-table-column>
+    <el-table-column v-if="showEnvironment" :label="tUi('构建环境')" width="135"><template #default="{row}"><el-tag v-if="row.buildEnvironmentName" size="small" effect="plain">{{environmentLabel(row.buildEnvironmentName)}}</el-tag><span v-else>{{ tUi('环境未记录') }}</span><small v-if="row._detailsUnavailable" class="app-artifact-detail">{{ tUi('详情暂未读取') }}</small></template></el-table-column>
+    <el-table-column :label="tUi('打包人')" width="105"><template #default="{row}">{{row.createdBy||'—'}}</template></el-table-column>
+    <el-table-column v-if="showDelivery" :label="tUi('交付')" width="115" fixed="right"><template #default="{row}"><el-button link type="primary" :disabled="!enabled||!!blocked(row)" :title="blocked(row)" @click="emit('deliver',row)">{{ tUi('创建交付') }}</el-button></template></el-table-column>
   </el-table>
 </template>
 

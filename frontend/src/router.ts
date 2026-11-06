@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from './views/LoginView.vue'
 import DashboardView from './views/DashboardView.vue'
@@ -53,7 +54,6 @@ const router = createRouter({
 let verifiedToken = ''
 
 router.beforeEach(async (to) => {
-  document.title = `${String(to.meta.title || '控制台')} · 发版平台`
   // The login page must remain reachable even when a previous session is stale.
   if (to.meta.public) return true
   const token = localStorage.getItem('release_token')
@@ -61,7 +61,7 @@ router.beforeEach(async (to) => {
   if (token !== verifiedToken || !authUser.value) {
     try {
       const me = payload<Record<string, unknown>>(await http.get('/auth/me'), {})
-      if (!me.username) throw new Error('登录状态无效')
+      if (!me.username) throw new Error(tUi('登录状态无效'))
       setAuthUser({username:String(me.username),displayName:String(me.displayName||me.username),admin:Boolean(me.admin),permissions:Array.isArray(me.permissions)?me.permissions.map(String):[],totpEnabled:Boolean(me.totpEnabled),requiresTotpSetup:!me.totpEnabled})
       verifiedToken = token
     } catch (error) {

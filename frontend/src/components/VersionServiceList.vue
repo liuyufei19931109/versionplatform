@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authUser, hasMenu } from '../auth'
@@ -33,13 +35,13 @@ function matchAction(item: VersionItem, match: BuildMatch) {
   if (item.status !== 'SUCCESS' || !codeEnabled.value || stale(item) || codeBuildBlocked(update(item))) return
   const app = item.serviceType === 'FLUTTER_ANDROID'
   if (match.status === 'BUILT' && match.artifactId && hasMenu(app ? 'apps' : 'release')) {
-    return { label: app ? '交付此包' : '用此包发版', to: {
+    return { label: app ? tUi('交付此包') : tUi('用此包发版'), to: {
       path: app ? `/apps/${item.serviceId}/release` : '/release/new',
       query: { serviceId: String(item.serviceId), artifactId: String(match.artifactId), environment: match.environmentName },
     } }
   }
   if (match.buildTaskId && hasMenu(app ? 'apps' : 'builds')) {
-    const label = match.status === 'BUILD_FAILED' ? '查看失败任务' : match.status === 'BUILT' ? '查看构建' : '查看任务'
+    const label = match.status === 'BUILD_FAILED' ? tUi('查看失败任务') : match.status === 'BUILT' ? tUi('查看构建') : tUi('查看任务')
     return { label, to: { path: `${app ? '/apps' : ''}/builds/${match.buildTaskId}` } }
   }
 }
@@ -58,45 +60,49 @@ const rowActions = computed(() => new Map(props.items.map(item => {
 function stale(item: VersionItem) { const value = update(item); return Boolean(codeError.value) || value.status === 'SYNC_ERROR' || value.status === 'UNKNOWN' && Boolean(value.headSha) }
 function updateTime(item: VersionItem) { const parts = timeParts(update(item).updatedAt); return `${parts.date} ${parts.time}`.trim() }
 function checkedTime(item: VersionItem) { const parts = timeParts(update(item).checkedAt); return `${parts.date} ${parts.time}`.trim() }
+function linkedBranchMessage(message: string): string {
+  const match = /^已关联已有分支；核对时提交 ([0-9a-f]{40,64})；后续打包继续校验最新 master$/i.exec(message)
+  return match ? tUi('已关联已有分支；核对时提交 {0}；后续打包继续校验最新 master', match[1]) : tUi(message)
+}
 </script>
 
 <template>
   <div class="version-services" :class="{ 'is-compact': compact }">
-    <div v-if="codeError" class="version-code-error" role="status"><span>代码动态暂时无法读取。{{codeEnabled?'下方保留上次结果，请重新核对。':'版本记录和原打包入口仍可使用。'}}</span><el-button link type="primary" :loading="codeLoading" @click="code.refresh">重新读取</el-button></div>
-    <div v-else-if="codeEnabled" class="version-code-notice"><span>代码更新提醒</span><small>{{compact?'关注后续新提交，不自动打包或发布':'关联时开始监控分支，后续新提交才提醒打包；不会自动打包或发布。'}}</small><el-button v-if="!compact" link type="primary" :loading="codeLoading" @click="code.refresh">刷新代码状态</el-button></div>
-    <div class="version-service-head" aria-hidden="true"><span>服务模块</span><span>版本分支<span v-if="!compact"> / 核对基线</span></span><span>{{codeEnabled?'分支 / 代码状态':'分支状态'}}</span><span>操作</span></div>
+    <div v-if="codeError" class="version-code-error" role="status"><span>{{ tUi('代码动态暂时无法读取。{0}', codeEnabled?tUi('下方保留上次结果，请重新核对。'):tUi('版本记录和原打包入口仍可使用。')) }}</span><el-button link type="primary" :loading="codeLoading" @click="code.refresh">{{ tUi('重新读取') }}</el-button></div>
+    <div v-else-if="codeEnabled" class="version-code-notice"><span>{{ tUi('代码更新提醒') }}</span><small>{{compact?tUi('关注后续新提交，不自动打包或发布'):tUi('关联时开始监控分支，后续新提交才提醒打包；不会自动打包或发布。')}}</small><el-button v-if="!compact" link type="primary" :loading="codeLoading" @click="code.refresh">{{ tUi('刷新代码状态') }}</el-button></div>
+    <div class="version-service-head" aria-hidden="true"><span>{{ tUi('服务模块') }}</span><span>{{ tUi('版本分支') }}<span v-if="!compact"> {{ tUi('/ 核对基线') }}</span></span><span>{{codeEnabled?tUi('分支 / 代码状态'):tUi('分支状态')}}</span><span>{{ tUi('操作') }}</span></div>
     <article v-for="item in items" :key="item.serviceId" class="version-service-row" :data-service-id="item.serviceId" :data-code-status="codeEnabled?update(item).status:undefined">
       <ServiceIdentity :service="item" />
       <div class="version-service-branch"><b :title="item.branch">{{ item.branch }}</b><div v-if="!compact" class="version-service-baseline"><span>master</span><CommitHash :value="item.baselineSha" /></div><small v-if="!compact&&item.baselineMessage" :title="item.baselineMessage">{{item.baselineMessage}}</small>
         <div v-if="codeEnabled" class="version-code-event" :class="{'is-stale':stale(item)}">
-          <div v-if="update(item).headSha" class="version-code-revision"><span>{{stale(item)?'上次记录':'最新提交'}}</span><CommitHash :value="update(item).headSha"/></div>
+          <div v-if="update(item).headSha" class="version-code-revision"><span>{{stale(item)?tUi('上次记录'):tUi('最新提交')}}</span><CommitHash :value="update(item).headSha"/></div>
           <p v-if="update(item).title" class="version-code-title" :title="update(item).title">{{update(item).title}}</p>
-          <div v-if="update(item).updatedAt||!compact&&update(item).actor" class="version-code-byline"><span v-if="!compact">{{codeEventLabel(update(item).eventType)}}<template v-if="update(item).actor"> · {{update(item).actor}}</template></span><time v-if="update(item).updatedAt" :title="formatTime(update(item).updatedAt)">{{update(item).eventType==='SYNC'?'发现于':'记录于'}} {{updateTime(item)}}</time></div>
-          <small v-if="update(item).checkedAt" class="version-code-checked" :title="formatTime(update(item).checkedAt)">最近核对 {{checkedTime(item)}}</small>
-          <p v-if="stale(item)" class="version-code-stale">{{update(item).headSha?'旧记录，尚未确认最新代码':'尚未确认分支最新代码'}}</p>
+          <div v-if="update(item).updatedAt||!compact&&update(item).actor" class="version-code-byline"><span v-if="!compact">{{codeEventLabel(update(item).eventType)}}<template v-if="update(item).actor"> · {{update(item).actor}}</template></span><time v-if="update(item).updatedAt" :title="formatTime(update(item).updatedAt)">{{update(item).eventType==='SYNC'?tUi('发现于'):tUi('记录于')}} {{updateTime(item)}}</time></div>
+          <small v-if="update(item).checkedAt" class="version-code-checked" :title="formatTime(update(item).checkedAt)">{{ tUi('最近核对 {0}', checkedTime(item)) }}</small>
+          <p v-if="stale(item)" class="version-code-stale">{{update(item).headSha?tUi('旧记录，尚未确认最新代码'):tUi('尚未确认分支最新代码')}}</p>
         </div>
       </div>
-      <div class="version-service-state"><div class="version-creation-state"><small v-if="codeEnabled">分支</small><el-tag size="small" :type="versionStatusType(item.status)" effect="light" disable-transitions>{{ versionStatusLabel(item.status) }}</el-tag></div><p v-if="item.message&&item.status!=='SUCCESS'">{{item.message}}</p>
-        <p v-if="item.status==='SUCCESS'&&item.message?.startsWith('已关联已有分支')" class="version-code-message" :title="item.message">已关联已有分支，保留现有代码</p>
-        <div v-if="codeEnabled" class="version-code-state"><el-tag size="small" :type="codeError?'info':codeStatusType(update(item).status)" effect="light" disable-transitions>{{codeError?'上次：':''}}{{codeStatusLabel(update(item).status)}}</el-tag>
+      <div class="version-service-state"><div class="version-creation-state"><small v-if="codeEnabled">{{ tUi('分支') }}</small><el-tag size="small" :type="versionStatusType(item.status)" effect="light" disable-transitions>{{ versionStatusLabel(item.status) }}</el-tag></div><p v-if="item.message&&item.status!=='SUCCESS'">{{ tUi(item.message) }}</p>
+        <p v-if="item.status==='SUCCESS'&&item.message?.startsWith('已关联已有分支')" class="version-code-message" :title="linkedBranchMessage(item.message)">{{ tUi('已关联已有分支，保留现有代码') }}</p>
+        <div v-if="codeEnabled" class="version-code-state"><el-tag size="small" :type="codeError?'info':codeStatusType(update(item).status)" effect="light" disable-transitions>{{codeError?tUi('上次：'):''}}{{codeStatusLabel(update(item).status)}}</el-tag>
           <small v-if="['NO_UPDATES','UNKNOWN'].includes(update(item).status)&&update(item).buildStatus==='PENDING_BUILD'" class="version-code-build-note">{{codeBuildStatusLabel(update(item).buildStatus)}}</small>
           <div v-if="item.serviceType==='FLUTTER_ANDROID'&&update(item).environments?.length" class="version-code-environments"><span v-for="env in update(item).environments" :key="env.environmentName" :class="'code-env-'+env.status.toLowerCase()"><b>{{environmentLabel(env.environmentName)}}</b>{{codeBuildStatusLabel(env.status)}}</span></div>
-          <p v-if="!compact&&update(item).message" class="version-code-message">{{update(item).message}}</p>
-          <p v-else-if="update(item).status==='UNKNOWN'&&!compact">尚未取得分支核对结果</p>
+          <p v-if="!compact&&update(item).message" class="version-code-message">{{ tUi(update(item).message || '') }}</p>
+          <p v-else-if="update(item).status==='UNKNOWN'&&!compact">{{ tUi('尚未取得分支核对结果') }}</p>
         </div>
       </div>
       <div class="version-service-actions">
         <el-button v-for="action in rowActions.get(item.serviceId)" :key="action.label" link type="primary" @click="router.push(action.to)">{{action.label}}</el-button>
-        <el-button v-if="buildRoute(item)" link :type="rowActions.get(item.serviceId)?.length ? 'info' : 'primary'" @click="build(item)">{{rowActions.get(item.serviceId)?.length ? '新建打包' : '去打包'}}</el-button>
+        <el-button v-if="buildRoute(item)" link :type="rowActions.get(item.serviceId)?.length ? 'info' : 'primary'" @click="build(item)">{{rowActions.get(item.serviceId)?.length ? tUi('新建打包') : tUi('去打包')}}</el-button>
         <template v-else-if="authUser?.admin&&['FAILED','CONFLICT','UNKNOWN'].includes(item.status)&&!compact">
-          <el-button link type="primary" :disabled="busy" @click="emit('link',item)">关联已有分支</el-button>
-          <el-button link type="primary" :disabled="busy" @click="emit('retry',item)">核对并重试</el-button>
+          <el-button link type="primary" :disabled="busy" @click="emit('link',item)">{{ tUi('关联已有分支') }}</el-button>
+          <el-button link type="primary" :disabled="busy" @click="emit('retry',item)">{{ tUi('核对并重试') }}</el-button>
         </template>
-        <span v-else-if="!rowActions.get(item.serviceId)?.length" class="no-action">{{codeEnabled&&codeBuildBlocked(update(item))?'请核对分支':'—'}}</span>
-        <a v-if="codeEnabled&&update(item).eventUrl" :href="update(item).eventUrl" target="_blank" rel="noopener noreferrer" class="version-github-link">看 GitHub</a>
+        <span v-else-if="!rowActions.get(item.serviceId)?.length" class="no-action">{{codeEnabled&&codeBuildBlocked(update(item))?tUi('请核对分支'):'—'}}</span>
+        <a v-if="codeEnabled&&update(item).eventUrl" :href="update(item).eventUrl" target="_blank" rel="noopener noreferrer" class="version-github-link">{{ tUi('看 GitHub') }}</a>
       </div>
     </article>
-    <div v-if="!items.length" class="version-services-empty">当前权限下没有可查看的服务模块。</div>
+    <div v-if="!items.length" class="version-services-empty">{{ tUi('当前权限下没有可查看的服务模块。') }}</div>
   </div>
 </template>
 

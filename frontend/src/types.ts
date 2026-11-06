@@ -143,6 +143,7 @@ export interface ReleaseStep {
   message?: string
   log?: string
   logText?: string
+  rawLog?: string
   startedAt?: string
   finishedAt?: string
 }
@@ -187,6 +188,7 @@ export interface Release {
   createdAt?: string
   updatedAt?: string
   logs?: string
+  rawLog?: string
   steps?: ReleaseStep[]
   [key: string]: unknown
 }

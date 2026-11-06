@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { currentLocale, tUi } from '../i18n'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ArrowLeft, ArrowUp, Bottom, Close, CopyDocument, Delete, Download, FullScreen, Refresh, Search } from '@element-plus/icons-vue'
@@ -67,15 +69,15 @@ const chunks = computed(() => {
   return list
 })
 const statusText = computed(() => ({
-  idle: fetchedAt.value ? `已读取 ${logTime(fetchedAt.value)}` : entries.value.length ? '已暂停' : '未读取', loading: '正在读取…', connecting: '正在连接…',
-  live: '实时跟踪中', reconnecting: `连接中断，正在重连（${retry.value}/3）`, ended: '已停止跟踪', error: '读取失败',
+  idle: fetchedAt.value ? tUi('已读取 {0}', logTime(fetchedAt.value)) : entries.value.length ? tUi('已暂停') : tUi('未读取'), loading: tUi('正在读取…'), connecting: tUi('正在连接…'),
+  live: tUi('实时跟踪中'), reconnecting: tUi('连接中断，正在重连（{0}/3）', retry.value), ended: tUi('已停止跟踪'), error: tUi('读取失败'),
 })[phase.value])
 const currentContainer = computed(() => header.value?.containers.find(container => container.id === header.value?.containerId))
 const actualSource = computed(() => header.value?.source || source.value)
 const selectedFile = computed(() => header.value?.files?.find(file => file.id === header.value?.fileId))
 const sourcePath = computed(() => actualSource.value === 'application'
   ? [header.value?.logDirectory, selectedFile.value?.name].filter(Boolean).join('/')
-  : '容器标准输出（docker logs）')
+  : tUi('容器标准输出（docker logs）'))
 const busy = computed(() => phase.value === 'loading' || phase.value === 'connecting')
 
 watch(showTime, value => savePref('time', value))
@@ -123,7 +125,7 @@ async function loadSnapshot() {
     header.value = data.header; replace(data.lines || []); truncatedEarly.value = Boolean(data.truncated); fetchedAt.value = data.fetchedAt || new Date().toISOString(); phase.value = 'idle'
   } catch (reason) {
     if (current !== generation) return
-    error.value = errorText(reason, '读取日志失败'); phase.value = 'error'
+    error.value = errorText(reason, tUi('读取日志失败')); phase.value = 'error'
   }
 }
 
@@ -146,7 +148,7 @@ async function startStream(resume: boolean) {
     if (response.status === 401) { clearAuth(); location.replace('/login?expired=1'); return }
     if (!response.ok || !response.body) {
       const body = await response.json().catch(() => ({})) as { message?: string }
-      throw new StreamRejected(body.message || `日志连接失败（HTTP ${response.status}）`)
+      throw new StreamRejected(body.message || tUi('日志连接失败（HTTP {0}）', response.status))
     }
     const reader = response.body.getReader(), decoder = new TextDecoder()
     let buffer = ''
@@ -178,14 +180,14 @@ async function startStream(resume: boolean) {
 }
 
 function finish(reason: string, message: string) {
-  if (reason === 'ERROR') { error.value = message || '日志读取中断'; phase.value = 'error' }
+  if (reason === 'ERROR') { error.value = message || tUi('日志读取中断'); phase.value = 'error' }
   else { notice.value = message; phase.value = 'ended' }
   live.value = false
 }
 
 function reconnect() {
   if (!live.value) return
-  if (retry.value >= 3) { error.value = '实时日志连接已断开，请检查网络后重新连接'; phase.value = 'error'; live.value = false; retry.value = 0; return }
+  if (retry.value >= 3) { error.value = tUi('实时日志连接已断开，请检查网络后重新连接'); phase.value = 'error'; live.value = false; retry.value = 0; return }
   retry.value++; phase.value = 'reconnecting'
   retryTimer = setTimeout(() => { retryTimer = undefined; if (live.value) void startStream(true) }, [2000, 5000, 10000][retry.value - 1])
 }
@@ -228,7 +230,7 @@ async function loadEarlier() {
     follow.value = false
     await nextTick()
     if (element) element.scrollTop += element.scrollHeight - before
-  } catch (reason) { if (current === generation) ElMessage.error(errorText(reason, '读取更早的日志失败')) }
+  } catch (reason) { if (current === generation) ElMessage.error(errorText(reason, tUi('读取更早的日志失败'))) }
   finally { if (current === generation) loadingEarlier.value = false }
 }
 
@@ -272,8 +274,8 @@ async function copyVisible() {
   const text = downloadText(visible.value, actualSource.value)
   try {
     await copyLogText(text)
-    ElMessage.success(`已复制 ${visible.value.length} 行`)
-  } catch { ElMessage.warning('浏览器未允许复制，请改用下载') }
+    ElMessage.success(tUi('已复制 {0} 行', visible.value.length))
+  } catch { ElMessage.warning(tUi('浏览器未允许复制，请改用下载')) }
 }
 function clearView() { resetBuffer(); notice.value = '' }
 
@@ -291,7 +293,7 @@ function onSearchKey(event: KeyboardEvent) {
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   try { rows.value = payload<RuntimeSnapshot>(await http.get('/runtime'), { rows: [] } as unknown as RuntimeSnapshot).rows || [] }
-  catch (reason) { rowsError.value = errorText(reason, '读取服务节点失败') }
+  catch (reason) { rowsError.value = errorText(reason, tUi('读取服务节点失败')) }
   if (!route.query.environmentId && resolvedRow.value) { await router.replace({ query: { environmentId: String(resolvedRow.value.environmentId), serverId: String(resolvedRow.value.serverId) } }); return }
   if (targetKey.value) void startStream(false)
 })
@@ -302,84 +304,84 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); stopStream
   <div class="logs-page" :class="{ 'is-fullscreen': fullscreen }">
     <div class="page-head logs-head">
       <div>
-        <el-button link :icon="ArrowLeft" @click="router.push('/runtime')">返回运行总览</el-button>
-        <h2>服务日志</h2>
+        <el-button link :icon="ArrowLeft" @click="router.push('/runtime')">{{ tUi('返回运行总览') }}</el-button>
+        <h2>{{ tUi('服务日志') }}</h2>
         <p v-if="header || currentRow" class="logs-identity">
           <b>{{ header?.serviceName || currentRow?.serviceName }}</b>
           <span class="environment-chip" :class="`environment-chip--${header?.environmentName || currentRow?.environmentName}`">{{ environmentLabel(header?.environmentName || currentRow?.environmentName) }}</span>
           <span>{{ header?.serverName || currentRow?.serverName }}</span>
           <template v-if="header?.containerName"><span class="inline-separator">/</span><code>{{ header.containerName }}</code><span class="container-state" :class="`is-${currentContainer?.state}`">{{ currentContainer?.state }}</span></template>
         </p>
-        <p v-else>选择服务节点，查看应用日志或容器标准输出。</p>
+        <p v-else>{{ tUi('选择服务节点，查看应用日志或容器标准输出。') }}</p>
       </div>
     </div>
 
     <section class="panel logs-panel">
       <div class="logs-toolbar">
         <div class="logs-toolbar-row">
-          <el-select :model-value="targetKey" filterable placeholder="选择服务节点" class="logs-node-select" aria-label="服务节点" @update:model-value="selectTarget">
+          <el-select :model-value="targetKey" filterable :placeholder="tUi('选择服务节点')" class="logs-node-select" :aria-label="tUi('服务节点')" @update:model-value="selectTarget">
             <el-option-group v-for="group in nodeGroups" :key="group.label" :label="group.label">
               <el-option v-for="row in group.rows" :key="row.key" :value="`${row.environmentId}:${row.serverId}`" :label="`${row.serviceName} · ${environmentLabel(row.environmentName)} · ${row.serverName}`">
                 <span class="node-option"><span class="environment-chip" :class="`environment-chip--${row.environmentName}`">{{ environmentLabel(row.environmentName) }}</span>{{ row.serverName }}<small>{{ row.host }}</small></span>
               </el-option>
             </el-option-group>
           </el-select>
-          <el-select :model-value="source" class="logs-source-select" aria-label="日志来源" @update:model-value="selectSource">
-            <el-option value="application" label="应用日志"/>
-            <el-option value="stdout" label="容器标准输出"/>
+          <el-select :model-value="source" class="logs-source-select" :aria-label="tUi('日志来源')" @update:model-value="selectSource">
+            <el-option value="application" :label="tUi('应用日志')"/>
+            <el-option value="stdout" :label="tUi('容器标准输出')"/>
           </el-select>
-          <el-select v-if="actualSource === 'application' && header?.files?.length" :model-value="header.fileId" class="logs-file-select" filterable aria-label="日志文件" @update:model-value="selectFile">
+          <el-select v-if="actualSource === 'application' && header?.files?.length" :model-value="header.fileId" class="logs-file-select" filterable :aria-label="tUi('日志文件')" @update:model-value="selectFile">
             <el-option v-for="file in header.files" :key="file.id" :value="file.id" :label="file.name"/>
           </el-select>
-          <el-select v-if="actualSource === 'stdout' && (header?.containers.length || 0) > 1" :model-value="header?.containerId" class="logs-container-select" aria-label="容器" @update:model-value="selectContainer">
+          <el-select v-if="actualSource === 'stdout' && (header?.containers.length || 0) > 1" :model-value="header?.containerId" class="logs-container-select" :aria-label="tUi('容器')" @update:model-value="selectContainer">
             <el-option v-for="container in header?.containers" :key="container.id" :value="container.id" :label="container.name || container.id.slice(0, 12)">
               <span class="node-option">{{ container.name || container.id.slice(0, 12) }}<span class="container-state" :class="`is-${container.state}`">{{ container.state }}</span></span>
             </el-option>
           </el-select>
           <div class="logs-live">
             <span class="logs-status" :class="`is-${phase}`" role="status"><i></i>{{ statusText }}</span>
-            <el-switch v-model="live" :disabled="!targetKey" inline-prompt active-text="实时" inactive-text="暂停" aria-label="实时跟踪"/>
-            <el-button v-if="!live" :icon="Refresh" :loading="phase === 'loading'" :disabled="!targetKey" @click="loadSnapshot">刷新</el-button>
+            <el-switch v-model="live" :disabled="!targetKey" inline-prompt :active-text="tUi('实时')" :inactive-text="tUi('暂停')" :aria-label="tUi('实时跟踪')"/>
+            <el-button v-if="!live" :icon="Refresh" :loading="phase === 'loading'" :disabled="!targetKey" @click="loadSnapshot">{{ tUi('刷新') }}</el-button>
           </div>
         </div>
-        <div class="logs-source-info" aria-label="当前日志来源">
-          <span>{{ actualSource === 'application' ? '日志路径' : '当前来源' }}</span><code>{{ sourcePath }}</code>
+        <div class="logs-source-info" :aria-label="tUi('当前日志来源')">
+          <span>{{ actualSource === 'application' ? tUi('日志路径') : tUi('当前来源') }}</span><code>{{ sourcePath }}</code>
           <span v-if="header?.fallbackReason" class="logs-warning">{{ header.fallbackReason }}</span>
         </div>
         <div class="logs-toolbar-row">
           <div class="logs-search">
-            <el-input ref="searchInput" v-model="query" :prefix-icon="Search" clearable placeholder="搜索日志（按 / 聚焦，回车下一个）" aria-label="搜索日志" @keydown="onSearchKey"/>
-            <span v-if="trimmedQuery" class="search-count">{{ matchIds.length ? `${activeMatchIndex + 1 || '–'} / ${matchIds.length}` : '无匹配' }}</span>
+            <el-input ref="searchInput" v-model="query" :prefix-icon="Search" clearable :placeholder="tUi('搜索日志（按 / 聚焦，回车下一个）')" :aria-label="tUi('搜索日志')" @keydown="onSearchKey"/>
+            <span v-if="trimmedQuery" class="search-count">{{ matchIds.length ? `${activeMatchIndex + 1 || '–'} / ${matchIds.length}` : tUi('无匹配') }}</span>
             <el-button-group v-if="trimmedQuery">
-              <el-button :icon="ArrowUp" :disabled="!matchIds.length" aria-label="上一个匹配" @click="stepMatch(-1)"/>
-              <el-button :icon="ArrowDown" :disabled="!matchIds.length" aria-label="下一个匹配" @click="stepMatch(1)"/>
+              <el-button :icon="ArrowUp" :disabled="!matchIds.length" :aria-label="tUi('上一个匹配')" @click="stepMatch(-1)"/>
+              <el-button :icon="ArrowDown" :disabled="!matchIds.length" :aria-label="tUi('下一个匹配')" @click="stepMatch(1)"/>
             </el-button-group>
-            <el-checkbox v-model="onlyMatches" :disabled="!trimmedQuery">只看匹配行</el-checkbox>
+            <el-checkbox v-model="onlyMatches" :disabled="!trimmedQuery">{{ tUi('只看匹配行') }}</el-checkbox>
           </div>
-          <el-radio-group v-model="level" size="small" aria-label="日志级别">
-            <el-radio-button value="all">全部</el-radio-button><el-radio-button value="warn">警告及以上</el-radio-button><el-radio-button value="error">仅错误</el-radio-button>
+          <el-radio-group v-model="level" size="small" :aria-label="tUi('日志级别')">
+            <el-radio-button value="all">{{ tUi('全部') }}</el-radio-button><el-radio-button value="warn">{{ tUi('警告及以上') }}</el-radio-button><el-radio-button value="error">{{ tUi('仅错误') }}</el-radio-button>
           </el-radio-group>
           <div class="logs-range">
-            <el-select v-model="tail" size="small" aria-label="读取行数" class="range-select"><el-option v-for="value in TAIL_OPTIONS" :key="value" :value="value" :label="`最近 ${value} 行`"/></el-select>
-            <el-select v-model="since" size="small" aria-label="时间范围" placeholder="不限时间" class="range-select"><el-option v-for="option in SINCE_OPTIONS" :key="option.value" :value="option.value" :label="option.label"/></el-select>
+            <el-select v-model="tail" size="small" :aria-label="tUi('读取行数')" class="range-select"><el-option v-for="value in TAIL_OPTIONS" :key="value" :value="value" :label="tUi('最近 {0} 行', value)"/></el-select>
+            <el-select v-model="since" size="small" :aria-label="tUi('时间范围')" :placeholder="tUi('不限时间')" class="range-select"><el-option v-for="option in SINCE_OPTIONS" :key="option.value" :value="option.value" :label="option.label"/></el-select>
           </div>
           <div class="logs-view-toggles">
-            <el-checkbox v-model="showTime" size="small">时间</el-checkbox>
-            <el-checkbox v-model="wrap" size="small">自动换行</el-checkbox>
-            <el-tooltip content="下载当前已读取的日志" placement="top"><el-button size="small" :icon="Download" :disabled="!entries.length" aria-label="下载日志" @click="download"/></el-tooltip>
-            <el-tooltip content="复制当前显示的行" placement="top"><el-button size="small" :icon="CopyDocument" :disabled="!visible.length" aria-label="复制日志" @click="copyVisible"/></el-tooltip>
-            <el-tooltip content="清空视图（不影响服务器上的日志）" placement="top"><el-button size="small" :icon="Delete" :disabled="!entries.length" aria-label="清空视图" @click="clearView"/></el-tooltip>
-            <el-tooltip :content="fullscreen ? '退出全屏（Esc）' : '全屏查看'" placement="top"><el-button size="small" :icon="fullscreen ? Close : FullScreen" :aria-label="fullscreen ? '退出全屏' : '全屏查看'" @click="fullscreen = !fullscreen"/></el-tooltip>
+            <el-checkbox v-model="showTime" size="small">{{ tUi('时间') }}</el-checkbox>
+            <el-checkbox v-model="wrap" size="small">{{ tUi('自动换行') }}</el-checkbox>
+            <el-tooltip :content="tUi('下载当前已读取的日志')" placement="top"><el-button size="small" :icon="Download" :disabled="!entries.length" :aria-label="tUi('下载日志')" @click="download"/></el-tooltip>
+            <el-tooltip :content="tUi('复制当前显示的行')" placement="top"><el-button size="small" :icon="CopyDocument" :disabled="!visible.length" :aria-label="tUi('复制日志')" @click="copyVisible"/></el-tooltip>
+            <el-tooltip :content="tUi('清空视图（不影响服务器上的日志）')" placement="top"><el-button size="small" :icon="Delete" :disabled="!entries.length" :aria-label="tUi('清空视图')" @click="clearView"/></el-tooltip>
+            <el-tooltip :content="fullscreen ? tUi('退出全屏（Esc）') : tUi('全屏查看')" placement="top"><el-button size="small" :icon="fullscreen ? Close : FullScreen" :aria-label="fullscreen ? tUi('退出全屏') : tUi('全屏查看')" @click="fullscreen = !fullscreen"/></el-tooltip>
           </div>
         </div>
       </div>
 
       <div class="logs-console-wrap">
-        <div ref="viewport" class="logs-console" :class="{ wrap, 'no-time': !showTime }" tabindex="0" aria-label="服务日志内容" @scroll.passive="onScroll">
+        <div ref="viewport" class="logs-console" :class="{ wrap, 'no-time': !showTime }" tabindex="0" :aria-label="tUi('服务日志内容')" @scroll.passive="onScroll">
           <div v-if="entries.length && entries[0].ts" class="logs-earlier">
-            <span v-if="trimmed">视图仅保留最近 {{ MAX_ENTRIES.toLocaleString() }} 行，已移除较早的 {{ trimmed.toLocaleString() }} 行</span>
-            <span v-else-if="truncatedEarly">部分较早日志超出单次读取大小，已省略</span>
-            <el-button v-if="!trimmed" link size="small" :loading="loadingEarlier" :disabled="noEarlier" @click="loadEarlier">{{ noEarlier ? '没有更早的日志' : `加载更早的 ${tail} 行` }}</el-button>
+            <span v-if="trimmed">{{ tUi('视图仅保留最近 {0} 行，已移除较早的 {1} 行', MAX_ENTRIES.toLocaleString(currentLocale()), trimmed.toLocaleString(currentLocale())) }}</span>
+            <span v-else-if="truncatedEarly">{{ tUi('部分较早日志超出单次读取大小，已省略') }}</span>
+            <el-button v-if="!trimmed" link size="small" :loading="loadingEarlier" :disabled="noEarlier" @click="loadEarlier">{{ noEarlier ? tUi('没有更早的日志') : tUi('加载更早的 {0} 行', tail) }}</el-button>
           </div>
           <div v-for="chunk in chunks" :key="chunk.key" v-memo="[chunk.key, trimmedQuery, chunk.active && activeId]" class="logs-chunk" :style="{ containIntrinsicSize: `auto ${chunk.entries.length * 20}px` }">
             <div v-for="entry in chunk.entries" :key="entry.id" class="log-line" :class="[entry.level && `is-${entry.level}`, { 'is-continuation': entry.continuation, 'is-active': entry.id === activeId }]" :data-id="entry.id">
@@ -388,23 +390,23 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); stopStream
             </div>
           </div>
           <div v-if="!entries.length" class="logs-empty">
-            <template v-if="!targetKey"><b>选择要查看的服务节点</b><span>{{ rowsError || '在上方选择服务与节点，平台会读取该服务的最新日志。' }}</span></template>
-            <template v-else-if="phase === 'error'"><b>日志读取失败</b><span>{{ error }}</span><el-button size="small" @click="live ? reload() : (live = true)">重新连接</el-button></template>
-            <template v-else-if="busy || phase === 'reconnecting'"><b>{{ statusText }}</b><span>首次连接经 IAP 的节点可能需要十几秒。</span></template>
-            <template v-else><b>这段时间没有日志输出</b><span>可以扩大时间范围或读取行数。</span></template>
+            <template v-if="!targetKey"><b>{{ tUi('选择要查看的服务节点') }}</b><span>{{ rowsError || tUi('在上方选择服务与节点，平台会读取该服务的最新日志。') }}</span></template>
+            <template v-else-if="phase === 'error'"><b>{{ tUi('日志读取失败') }}</b><span>{{ error }}</span><el-button size="small" @click="live ? reload() : (live = true)">{{ tUi('重新连接') }}</el-button></template>
+            <template v-else-if="busy || phase === 'reconnecting'"><b>{{ statusText }}</b><span>{{ tUi('首次连接经 IAP 的节点可能需要十几秒。') }}</span></template>
+            <template v-else><b>{{ tUi('这段时间没有日志输出') }}</b><span>{{ tUi('可以扩大时间范围或读取行数。') }}</span></template>
           </div>
-          <div v-else-if="!visible.length" class="logs-empty"><b>没有符合筛选条件的行</b><span>调整级别或关闭“只看匹配行”。</span></div>
+          <div v-else-if="!visible.length" class="logs-empty"><b>{{ tUi('没有符合筛选条件的行') }}</b><span>{{ tUi('调整级别或关闭“只看匹配行”。') }}</span></div>
         </div>
-        <button v-if="!follow && entries.length" type="button" class="logs-jump" @click="scrollToBottom"><el-icon><Bottom/></el-icon>{{ unseen ? `${unseen > 999 ? '999+' : unseen} 条新日志` : '回到最新' }}</button>
+        <button v-if="!follow && entries.length" type="button" class="logs-jump" @click="scrollToBottom"><el-icon><Bottom/></el-icon>{{ unseen ? tUi('{0} 条新日志', unseen > 999 ? '999+' : unseen) : tUi('回到最新') }}</button>
       </div>
 
       <div class="logs-footer">
-        <span>共 {{ entries.length.toLocaleString() }} 行<template v-if="visible.length !== entries.length"> · 显示 {{ visible.length.toLocaleString() }} 行</template></span>
-        <button v-if="errorIds.length" type="button" class="logs-error-count" @click="nextError">错误 {{ errorIds.length }} 处 · 跳到下一处</button>
-        <span v-if="dropped" class="logs-warning">输出过快，已跳过 {{ dropped.toLocaleString() }} 行</span>
-        <span v-if="notice" class="logs-notice">{{ notice }}<el-button link type="primary" size="small" @click="live = true">继续跟踪</el-button></span>
-        <span v-if="error && entries.length" class="logs-warning">{{ error }}<el-button link type="primary" size="small" @click="live ? reload() : (live = true)">重新连接</el-button></span>
-        <span class="logs-hint">{{ actualSource === 'application' ? '应用日志文件' : '容器标准输出' }} · 时间为本地时区</span>
+        <span>{{ tUi('共 {0} 行', entries.length.toLocaleString(currentLocale())) }}<template v-if="visible.length !== entries.length">{{ tUi('· 显示 {0} 行', visible.length.toLocaleString(currentLocale())) }}</template></span>
+        <button v-if="errorIds.length" type="button" class="logs-error-count" @click="nextError">{{ tUi('错误 {0} 处 · 跳到下一处', errorIds.length) }}</button>
+        <span v-if="dropped" class="logs-warning">{{ tUi('输出过快，已跳过 {0} 行', dropped.toLocaleString(currentLocale())) }}</span>
+        <span v-if="notice" class="logs-notice">{{ notice }}<el-button link type="primary" size="small" @click="live = true">{{ tUi('继续跟踪') }}</el-button></span>
+        <span v-if="error && entries.length" class="logs-warning">{{ error }}<el-button link type="primary" size="small" @click="live ? reload() : (live = true)">{{ tUi('重新连接') }}</el-button></span>
+        <span class="logs-hint">{{ tUi('{0} · 时间为本地时区', actualSource === 'application' ? tUi('应用日志文件') : tUi('容器标准输出')) }}</span>
       </div>
     </section>
   </div>

@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { authUser } from '../auth'
 import { http, payload } from '../api'
@@ -82,7 +83,7 @@ export function useTaskActivity(onCompleted: (tasks: ActivityTask[]) => void) {
         feed.value = snapshot; error.value = ''
         await noticeCompletions(snapshot, request)
       } catch {
-        if (!disposed && request === generation && !abort.signal.aborted) error.value = feed.value ? '状态更新中断，当前显示上次结果' : '暂时无法读取任务状态'
+        if (!disposed && request === generation && !abort.signal.aborted) error.value = feed.value ? tUi('状态更新中断，当前显示上次结果') : tUi('暂时无法读取任务状态')
       } finally {
         if (!disposed && request === generation) { loading.value = false; pending = undefined; controller = undefined; schedule() }
       }

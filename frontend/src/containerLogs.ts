@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 // Pure helpers for the service log viewer. Network and DOM code lives in ContainerLogsView.vue.
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | ''
 export type LogSource = 'application' | 'stdout'
@@ -14,8 +15,8 @@ export interface LogSnapshot { header: LogHeader; lines: RawLogLine[]; truncated
 
 export const TAIL_OPTIONS = [200, 500, 1000, 2000, 5000]
 export const SINCE_OPTIONS = [
-  { value: '', label: '不限时间' }, { value: '5m', label: '最近 5 分钟' }, { value: '15m', label: '最近 15 分钟' },
-  { value: '1h', label: '最近 1 小时' }, { value: '6h', label: '最近 6 小时' }, { value: '24h', label: '最近 24 小时' },
+  { value: '', get label() { return tUi('不限时间') } }, { value: '5m', get label() { return tUi('最近 5 分钟') } }, { value: '15m', get label() { return tUi('最近 15 分钟') } },
+  { value: '1h', get label() { return tUi('最近 1 小时') } }, { value: '6h', get label() { return tUi('最近 6 小时') } }, { value: '24h', get label() { return tUi('最近 24 小时') } },
 ]
 export const MAX_ENTRIES = 20000
 

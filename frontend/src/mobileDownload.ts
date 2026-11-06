@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 /** Download activity is measured in received bytes, not total request duration. */
 export interface PackageDownloadProgress {
   loaded: number
@@ -38,9 +39,9 @@ async function requestError(error: unknown): Promise<Error> {
   if (typeof detail?.message === 'string' && detail.message.trim()) {
     return new PackageDownloadError('request', detail.message)
   }
-  if (failure.response?.status === 401) return new PackageDownloadError('request', '登录已过期，请重新登录后下载')
-  if (failure.response?.status === 403) return new PackageDownloadError('request', '没有下载权限，请联系管理员')
-  return new PackageDownloadError('request', '下载连接中断，请检查网络后重新下载')
+  if (failure.response?.status === 401) return new PackageDownloadError('request', tUi('登录已过期，请重新登录后下载'))
+  if (failure.response?.status === 403) return new PackageDownloadError('request', tUi('没有下载权限，请联系管理员'))
+  return new PackageDownloadError('request', tUi('下载连接中断，请检查网络后重新下载'))
 }
 
 export function createPackageDownload(options: PackageDownloadOptions) {
@@ -61,7 +62,7 @@ export function createPackageDownload(options: PackageDownloadOptions) {
 
   function armIdleTimer() {
     if (idleTimer !== undefined) clearTimeout(idleTimer)
-    idleTimer = setTimeout(() => interrupt(new PackageDownloadError('idle', '下载长时间没有收到数据，已停止。请检查网络后重新下载')), options.idleTimeoutMs ?? 120000)
+    idleTimer = setTimeout(() => interrupt(new PackageDownloadError('idle', tUi('下载长时间没有收到数据，已停止。请检查网络后重新下载'))), options.idleTimeoutMs ?? 120000)
   }
 
   function report(complete = false) {
@@ -72,7 +73,7 @@ export function createPackageDownload(options: PackageDownloadOptions) {
   const promise = Promise.resolve().then(async () => {
     try {
       if (interruption) throw interruption
-      if (!Number.isSafeInteger(total) || total <= 0) throw new PackageDownloadError('incomplete', '安装包大小信息不完整，请刷新页面后重试')
+      if (!Number.isSafeInteger(total) || total <= 0) throw new PackageDownloadError('incomplete', tUi('安装包大小信息不完整，请刷新页面后重试'))
       armIdleTimer()
       report()
       const response = await options.request({
@@ -83,7 +84,7 @@ export function createPackageDownload(options: PackageDownloadOptions) {
           if (finished || interruption || !Number.isFinite(event.loaded) || event.loaded <= loaded) return
           loaded = event.loaded
           if (loaded > total) {
-            interrupt(new PackageDownloadError('incomplete', '收到的文件大小与安装包记录不一致，已停止下载，请刷新后重试'))
+            interrupt(new PackageDownloadError('incomplete', tUi('收到的文件大小与安装包记录不一致，已停止下载，请刷新后重试')))
             return
           }
           armIdleTimer()
@@ -92,7 +93,7 @@ export function createPackageDownload(options: PackageDownloadOptions) {
       })
       if (interruption) throw interruption
       if (!(response.data instanceof Blob) || response.data.size !== total) {
-        throw new PackageDownloadError('incomplete', '安装包没有完整接收，未保存文件，请重新下载')
+        throw new PackageDownloadError('incomplete', tUi('安装包没有完整接收，未保存文件，请重新下载'))
       }
       loaded = total
       report(true)
@@ -105,5 +106,5 @@ export function createPackageDownload(options: PackageDownloadOptions) {
     }
   })
 
-  return { promise, cancel: () => interrupt(new PackageDownloadError('cancelled', '已取消下载')) }
+  return { promise, cancel: () => interrupt(new PackageDownloadError('cancelled', tUi('已取消下载'))) }
 }

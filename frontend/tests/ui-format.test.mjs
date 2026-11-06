@@ -5,7 +5,7 @@ import ts from 'typescript'
 
 const source = await readFile(new URL('../src/ui.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
-const { activityTime, completionTime, shortCommit, timeParts } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { activityTime, completionTime, shortCommit, timeParts } = await import(`data:text/javascript;base64,${Buffer.from(compiled.replaceAll("'./i18n'", JSON.stringify(new URL('../test-support/i18n.cjs', import.meta.url).href))).toString('base64')}`)
 
 test('short display preserves the full revision held by callers and tolerates legacy missing values', () => {
   const original = '12345678' + 'ab'.repeat(16)

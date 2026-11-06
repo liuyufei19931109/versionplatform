@@ -5,7 +5,7 @@ import ts from 'typescript'
 
 const source = await readFile(new URL('../src/mobile.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
-const { mobileBuildDefaults, mobileEnvironmentDefaults, mobileBuildError, mobileEnvironmentError, mobileArtifactEnvironmentError, normalizedMobileBuild, mobileParameterError, mobileParameterGroupError } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { mobileBuildDefaults, mobileEnvironmentDefaults, mobileBuildError, mobileEnvironmentError, mobileArtifactEnvironmentError, normalizedMobileBuild, mobileParameterError, mobileParameterGroupError } = await import(`data:text/javascript;base64,${Buffer.from(compiled.replaceAll("'./i18n'", JSON.stringify(new URL('../test-support/i18n.cjs', import.meta.url).href))).toString('base64')}`)
 const profile = (name) => ({ ...mobileEnvironmentDefaults(name), enabled: true, applicationId: `com.example.${name}`, expectedCertificateSha256: (name === 'prod' ? 'b' : 'a').repeat(64), signingProfile: name === 'prod' ? 'formal' : 'test', buildMode: name === 'prod' ? 'RELEASE' : 'DEBUG', allowDebugSigning: name !== 'prod' })
 const config = () => ({ ...mobileBuildDefaults('APK'), flutterVersion: '3.47.3', environments: { test: profile('test'), prod: profile('prod') } })
 

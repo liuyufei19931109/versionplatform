@@ -1,9 +1,10 @@
+const { runWithTranslations } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 const compiled = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/containerLogs.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 const context = { exports: {}, Date, Set, Map };
-vm.runInNewContext(compiled, context);
+runWithTranslations(compiled, context);
 const logs = context.exports;
 const plain = value => JSON.parse(JSON.stringify(value));
 

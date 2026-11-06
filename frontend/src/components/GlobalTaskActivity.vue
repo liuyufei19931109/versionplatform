@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+import { queueWaitText } from '../composables/useQueue'
+
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Clock, RefreshRight } from '@element-plus/icons-vue'
@@ -18,38 +21,38 @@ const running = computed(() => feed.value?.running)
 const pendingCount = computed(() => (feed.value?.pendingCount || 0) + (feed.value?.pendingRuntimeCount || 0))
 const activeSummary = computed(() => {
   const names = runningTasks.value.filter(task => task.visible).map(task => task.serviceName)
-  if (!names.length) return '任务详情按查看权限展示'
-  return names.slice(0, 2).join('、') + (names.length > 2 ? ` 等 ${names.length} 个服务任务` : '')
+  if (!names.length) return tUi('任务详情按查看权限展示')
+  return names.slice(0, 2).join('、') + (names.length > 2 ? tUi(' 等 {0} 个服务任务', names.length) : '')
 })
 const title = computed(() => {
-  if (error.value && !feed.value) return '任务状态暂不可用'
-  if (!feed.value) return '正在读取任务状态'
-  if (runningTasks.value.length > 1) return `${runningTasks.value.length} 个任务进行中`
-  if (running.value) return running.value.visible ? `${activityKind(running.value)}中` : '其他任务执行中'
-  return pendingCount.value ? '等待调度' : '当前空闲'
+  if (error.value && !feed.value) return tUi('任务状态暂不可用')
+  if (!feed.value) return tUi('正在读取任务状态')
+  if (runningTasks.value.length > 1) return tUi('{0} 个任务进行中', runningTasks.value.length)
+  if (running.value) return running.value.visible ? tUi('{0}中', activityKind(running.value)) : tUi('其他任务执行中')
+  return pendingCount.value ? tUi('等待调度') : tUi('当前空闲')
 })
 const sections = computed(() => [
-  { key: 'running', title: '正在执行', rows: runningTasks.value, note: '查看当前步骤，区分云端编译与本机后续处理。' },
-  { key: 'pending', title: '等待开始', rows: feed.value?.pending || [], note: '按提交顺序展示；云构建与本机任务分别等待资源，不代表全局启动顺序。' },
-  { key: 'runtime', title: '等待运行操作', rows: feed.value?.runtimePending || [], note: '重启、代码合并等等待本机执行资源，不代表与打包任务的先后顺序。' },
-  { key: 'recent', title: '我的最近结果', rows: (feed.value?.recent || []).slice(0, 5), note: '最近 24 小时内完成的 5 个任务。' },
+  { key: 'running', title: tUi('正在执行'), rows: runningTasks.value, note: tUi('查看当前步骤，区分云端编译与本机后续处理。') },
+  { key: 'pending', title: tUi('等待开始'), rows: feed.value?.pending || [], note: tUi('按提交顺序展示；云构建与本机任务分别等待资源，不代表全局启动顺序。') },
+  { key: 'runtime', title: tUi('等待运行操作'), rows: feed.value?.runtimePending || [], note: tUi('重启、代码合并等等待本机执行资源，不代表与打包任务的先后顺序。') },
+  { key: 'recent', title: tUi('我的最近结果'), rows: (feed.value?.recent || []).slice(0, 5), note: tUi('最近 24 小时内完成的 5 个任务。') },
 ].filter(section => section.rows.length))
 
 function go(task: ActivityTask) { if (task.detailPath) { open.value = false; void router.push(task.detailPath) } }
 function viewLatest() { open.value = true; void refresh() }
-function resultLabel(task: ActivityTask) { return task.kind === 'MINIPROGRAM' && task.status === 'RECONCILED' ? '已核对' : task.kind === 'MINIPROGRAM' && task.status === 'UNKNOWN' ? '微信结果待核对' : statusLabel(task.status) }
-function modeLabel(task: ActivityTask) { return task.executionMode === 'CLOUD' ? '云构建任务' : task.executionMode === 'LOCAL' ? '本机任务' : '' }
+function resultLabel(task: ActivityTask) { return task.kind === 'MINIPROGRAM' && task.status === 'RECONCILED' ? tUi('已核对') : task.kind === 'MINIPROGRAM' && task.status === 'UNKNOWN' ? tUi('微信结果待核对') : statusLabel(task.status) }
+function modeLabel(task: ActivityTask) { return task.executionMode === 'CLOUD' ? tUi('云构建任务') : task.executionMode === 'LOCAL' ? tUi('本机任务') : '' }
 function waitElapsed(task: ActivityTask) { return activityElapsed({ startedAt: task.createdAt, finishedAt: '' }, now.value) }
 function completed(tasks: ActivityTask[]) {
   if (!tasks.length) return
   const last = tasks[tasks.length - 1]!, single = tasks.length === 1
   const failed = tasks.some(task => task.status === 'FAILED' || (task.kind === 'MINIPROGRAM' && task.status === 'UNKNOWN'))
   const message = h('div', { class: 'task-completion-notice', 'data-testid': 'task-completion-notice' }, [
-    h('p', single ? last.errorSummary || `${last.serviceName} · ${resultLabel(last)}` : tasks.slice(-3).map(task => `${task.serviceName} ${resultLabel(task)}`).join('；')),
-    h('button', { type: 'button', onClick: () => { handle.close(); single && last.detailPath ? go(last) : viewLatest() } }, single && last.detailPath ? '查看任务' : '查看我的结果'),
+    h('p', single ? activityFailureMessage(last) || `${last.serviceName} · ${resultLabel(last)}` : tasks.slice(-3).map(task => `${task.serviceName} ${resultLabel(task)}`).join('；')),
+    h('button', { type: 'button', onClick: () => { handle.close(); single && last.detailPath ? go(last) : viewLatest() } }, single && last.detailPath ? tUi('查看任务') : tUi('查看我的结果')),
   ])
   const handle = ElNotification({
-    title: single ? `你的${activityKind(last)}${last.kind === 'MINIPROGRAM' ? ' · ' : ''}${resultLabel(last)}` : `你的 ${tasks.length} 个任务已有结果`,
+    title: single ? tUi('你的{0}{1}{2}', activityKind(last), last.kind === 'MINIPROGRAM' ? ' · ' : '', resultLabel(last)) : tUi('你的 {0} 个任务已有结果', tasks.length),
     message, type: failed ? 'warning' : tasks.every(task => task.status === 'SUCCESS') ? 'success' : 'info',
     duration: 10_000, position: 'bottom-right', customClass: 'task-completion-toast', onClose: () => notices.delete(handle),
   })
@@ -60,85 +63,93 @@ async function cancel(task: ActivityTask) {
   const initialScope = scope.value
   cancelling.value = task.key
   try {
-    await ElMessageBox.confirm(`“${task.serviceName}”尚未开始。确认取消这次${activityKind(task)}排队？`, '取消排队', { confirmButtonText: '取消排队', cancelButtonText: '继续等待', type: 'warning' })
+    await ElMessageBox.confirm(tUi('“{0}”尚未开始。确认取消这次{1}排队？', task.serviceName, activityKind(task)), tUi('取消排队'), { confirmButtonText: tUi('取消排队'), cancelButtonText: tUi('继续等待'), type: 'warning' })
     if (initialScope !== scope.value) return
     await http.post(task.cancelPath)
     if (initialScope !== scope.value) return
-    cancelled.value.add(task.key); ElMessage.success('取消请求已提交'); await refresh()
+    cancelled.value.add(task.key); ElMessage.success(tUi('取消请求已提交')); await refresh()
   } catch (reason) {
-    if (reason !== 'cancel' && reason !== 'close' && initialScope === scope.value) ElMessage.error(errorText(reason, '取消失败，请刷新任务状态后重试'))
+    if (reason !== 'cancel' && reason !== 'close' && initialScope === scope.value) ElMessage.error(errorText(reason, tUi('取消失败，请刷新任务状态后重试')))
   } finally { cancelling.value = '' }
 }
 watch(scope, () => { open.value = false; cancelled.value = new Set(); notices.forEach(notice => notice.close()); notices.clear() })
 watch(feed, value => { cancelled.value = new Set([...cancelled.value].filter(key => [...(value?.pending || []), ...(value?.runtimePending || [])].some(task => task.key === key))) })
 onBeforeUnmount(() => { notices.forEach(notice => notice.close()); notices.clear() })
+function activityFailureMessage(task: ActivityTask): string {
+  // The activity API emits summaries for release and restart steps; mini programs can report external errors.
+  if (task.kind === 'BUILD' || task.kind === 'DEPLOY' || task.kind === 'RESTART') {
+    const text = task.kind === 'RESTART' ? '{0}阶段未完成；请先核对目标服务状态，再查看详情中的错误日志' : '{0}阶段未完成；请查看详情中的错误日志后再决定是否重试'
+    if (task.stageLabel && task.errorSummary === text.replace('{0}', task.stageLabel)) return tUi(text, tUi(task.stageLabel))
+  }
+  return task.errorSummary
+}
 </script>
 
 <template>
   <div v-if="available" class="global-task-activity" :class="{ 'is-running': runningTasks.length && !error, 'is-stale': error }" data-testid="global-task-activity">
-    <button type="button" class="activity-trigger" :aria-expanded="open" aria-haspopup="dialog" aria-label="查看全平台任务与排队情况" @click="viewLatest">
+    <button type="button" class="activity-trigger" :aria-expanded="open" aria-haspopup="dialog" :aria-label="tUi('查看全平台任务与排队情况')" @click="viewLatest">
       <span class="activity-dot" aria-hidden="true" />
       <span class="activity-bar-content">
         <span class="activity-bar-main">
           <b>{{ title }}</b>
           <strong v-if="runningTasks.length === 1 && running?.visible" :title="running.serviceName">{{ running.serviceName }}</strong>
-          <span v-if="runningTasks.length === 1 && running?.visible" class="activity-bar-actor">{{ running.createdBy || '系统' }} 发起</span>
-          <span v-if="!runningTasks.length && feed && !error" class="activity-idle-detail">{{ pendingCount ? '等待可用执行资源' : '暂无进行中的任务' }}</span>
+          <span v-if="runningTasks.length === 1 && running?.visible" class="activity-bar-actor">{{ tUi('{0} 发起', running.createdBy || tUi('系统')) }}</span>
+          <span v-if="!runningTasks.length && feed && !error" class="activity-idle-detail">{{ pendingCount ? tUi('等待可用执行资源') : tUi('暂无进行中的任务') }}</span>
         </span>
         <span class="activity-bar-sub">
           <span v-if="error">{{ error }}</span>
           <span v-else-if="runningTasks.length > 1" :title="activeSummary">{{ activeSummary }}</span>
-          <template v-else-if="running?.visible"><span>{{ running.stageLabel || '正在准备任务' }}</span><span v-if="activityElapsed(running, now)" class="activity-elapsed">已运行 {{ activityElapsed(running, now) }}</span></template>
-          <span v-else-if="running">当前任务详情不在你的查看权限内</span>
+          <template v-else-if="running?.visible"><span>{{ tUi(running.stageLabel) || tUi('正在准备任务') }}</span><span v-if="activityElapsed(running, now)" class="activity-elapsed">{{ tUi('已运行 {0}', activityElapsed(running, now)) }}</span></template>
+          <span v-else-if="running">{{ tUi('当前任务详情不在你的查看权限内') }}</span>
         </span>
       </span>
       <span class="activity-bar-end">
-        <span v-if="feed?.cloudConcurrency" class="activity-cloud" title="名额从任务开始保留到产物回传、镜像等后续处理完成">云构建 <b>{{ feed.cloudRunningCount }}/{{ feed.cloudConcurrency }}</b></span>
-        <span v-if="feed" class="activity-pending" :class="{ 'has-pending': pendingCount }">排队 <b>{{ pendingCount }}</b></span>
-        <span class="activity-open-label">查看任务</span><el-icon><ArrowRight /></el-icon>
+        <span v-if="feed?.cloudConcurrency" class="activity-cloud" :title="tUi('名额从任务开始保留到产物回传、镜像等后续处理完成')">{{ tUi('云构建') }} <b>{{ feed.cloudRunningCount }}/{{ feed.cloudConcurrency }}</b></span>
+        <span v-if="feed" class="activity-pending" :class="{ 'has-pending': pendingCount }">{{ tUi('排队') }} <b>{{ pendingCount }}</b></span>
+        <span class="activity-open-label">{{ tUi('查看任务') }}</span><el-icon><ArrowRight /></el-icon>
       </span>
     </button>
   </div>
 
-  <el-drawer v-model="open" title="任务动态" size="min(640px, 100vw)" class="task-activity-drawer" :destroy-on-close="true">
-    <template #header><div class="activity-panel-heading"><h2>任务与排队</h2><p>{{ feed?.cloudConcurrency ? '云构建可以并行，本机处理与发布逐个执行' : '任务依次执行，状态自动更新' }}</p></div></template>
-    <div v-if="feed" class="activity-overview" aria-label="任务数量概览">
-      <div><span>进行中</span><strong>{{ runningTasks.length }}</strong></div>
-      <div><span>排队</span><strong>{{ pendingCount }}</strong></div>
-      <div v-if="feed.cloudConcurrency"><span>云构建名额</span><strong>{{ feed.cloudRunningCount }}<small> / {{ feed.cloudConcurrency }}</small></strong></div>
+  <el-drawer v-model="open" :title="tUi('任务动态')" size="min(640px, 100vw)" class="task-activity-drawer" :destroy-on-close="true">
+    <template #header><div class="activity-panel-heading"><h2>{{ tUi('任务与排队') }}</h2><p>{{ feed?.cloudConcurrency ? tUi('云构建可以并行，本机处理与发布逐个执行') : tUi('任务依次执行，状态自动更新') }}</p></div></template>
+    <div v-if="feed" class="activity-overview" :aria-label="tUi('任务数量概览')">
+      <div><span>{{ tUi('进行中') }}</span><strong>{{ runningTasks.length }}</strong></div>
+      <div><span>{{ tUi('排队') }}</span><strong>{{ pendingCount }}</strong></div>
+      <div v-if="feed.cloudConcurrency"><span>{{ tUi('云构建名额') }}</span><strong>{{ feed.cloudRunningCount }}<small> / {{ feed.cloudConcurrency }}</small></strong></div>
     </div>
-    <p v-if="feed?.cloudConcurrency" class="activity-capacity-note">云构建名额包含产物回传、镜像处理等后续步骤，完成后释放。</p>
-    <div class="activity-panel-toolbar"><span>{{ feed ? `更新于 ${formatTime(feed.serverTime)}` : '正在读取最新状态' }}</span><button type="button" :disabled="loading" @click="refresh"><el-icon><RefreshRight /></el-icon>刷新</button></div>
-    <div v-if="error" class="activity-panel-error" role="status"><b>{{ error }}</b><p>恢复连接后会自动更新。当前状态不能用于判断任务是否仍在执行。</p></div>
-    <div v-if="!feed" class="activity-panel-empty"><el-icon :size="25"><Clock /></el-icon><strong>{{ error ? '暂时无法读取任务' : '正在读取任务…' }}</strong><p v-if="error">点击刷新重试，正在执行的任务不会因此停止。</p></div>
+    <p v-if="feed?.cloudConcurrency" class="activity-capacity-note">{{ tUi('云构建名额包含产物回传、镜像处理等后续步骤，完成后释放。') }}</p>
+    <div class="activity-panel-toolbar"><span>{{ feed ? tUi('更新于 {0}', formatTime(feed.serverTime)) : tUi('正在读取最新状态') }}</span><button type="button" :disabled="loading" @click="refresh"><el-icon><RefreshRight /></el-icon>{{ tUi('刷新') }}</button></div>
+    <div v-if="error" class="activity-panel-error" role="status"><b>{{ error }}</b><p>{{ tUi('恢复连接后会自动更新。当前状态不能用于判断任务是否仍在执行。') }}</p></div>
+    <div v-if="!feed" class="activity-panel-empty"><el-icon :size="25"><Clock /></el-icon><strong>{{ error ? tUi('暂时无法读取任务') : tUi('正在读取任务…') }}</strong><p v-if="error">{{ tUi('点击刷新重试，正在执行的任务不会因此停止。') }}</p></div>
     <template v-else>
-      <div v-if="!runningTasks.length && !pendingCount" class="activity-panel-idle"><span class="activity-idle-dot"/><div><b>当前空闲</b><p>没有正在执行或排队的任务。</p></div></div>
+      <div v-if="!runningTasks.length && !pendingCount" class="activity-panel-idle"><span class="activity-idle-dot"/><div><b>{{ tUi('当前空闲') }}</b><p>{{ tUi('没有正在执行或排队的任务。') }}</p></div></div>
       <section v-for="section in sections" :key="section.key" class="activity-section" :data-section="section.key">
         <header><h3>{{ section.title }}<span class="activity-section-count">{{ section.rows.length }}</span></h3><p v-if="section.note">{{ section.note }}</p></header>
         <ol class="activity-task-list">
           <li v-for="task in section.rows" :key="task.key" class="activity-task" :class="{ 'is-mine': task.mine, 'is-failed': task.status === 'FAILED', 'is-hidden': !task.visible }" :data-task-key="task.key">
             <div class="activity-task-heading">
-              <div class="activity-task-identity"><strong>{{ task.visible ? task.serviceName : '其他任务' }}</strong><span v-if="task.mine" class="activity-mine">我发起的</span></div>
-              <span class="activity-status" :class="`activity-state-${task.status.toLowerCase()}`">{{ task.status === 'PENDING' ? '排队中' : resultLabel(task) }}</span>
+              <div class="activity-task-identity"><strong>{{ task.visible ? task.serviceName : tUi('其他任务') }}</strong><span v-if="task.mine" class="activity-mine">{{ tUi('我发起的') }}</span></div>
+              <span class="activity-status" :class="`activity-state-${task.status.toLowerCase()}`">{{ task.status === 'PENDING' ? tUi('排队中') : resultLabel(task) }}</span>
             </div>
             <template v-if="task.visible">
               <div class="activity-task-meta">
                 <span class="activity-task-kind">{{ activityKind(task) }}<span v-if="task.id"> #{{ task.id }}</span></span>
                 <span v-if="modeLabel(task)" class="activity-mode" :class="{ 'is-cloud': task.executionMode === 'CLOUD' }">{{ modeLabel(task) }}</span>
                 <span v-if="task.environment && task.environment !== 'build'" class="activity-environment" :class="`env-${task.environment}`">{{ environmentLabel(task.environment) }}</span>
-                <span class="activity-task-actor"><b>{{ task.createdBy || '系统' }}</b> 发起</span>
+                <span class="activity-task-actor"><b>{{ task.createdBy || tUi('系统') }}</b> {{ tUi('发起') }}</span>
               </div>
-              <div v-if="task.branch" class="activity-task-branch"><span>分支</span><b>{{ task.branch }}</b></div>
-              <div v-if="section.key === 'running'" class="activity-task-stage"><span><i aria-hidden="true"/>{{ task.stageLabel || '正在准备执行' }}</span><time v-if="activityElapsed(task, now)">已运行 {{ activityElapsed(task, now) }}</time></div>
-              <div v-if="task.status === 'PENDING'" class="activity-task-wait"><span>{{ task.waitingReason || '等待调度，开始后自动更新' }}</span><time v-if="waitElapsed(task)">已等待 {{ waitElapsed(task) }}</time></div>
-              <p v-if="task.status === 'FAILED'" class="activity-task-failure">{{ task.errorSummary || `${task.stageLabel || activityKind(task)}失败，查看任务定位原因。` }}</p>
-              <div class="activity-task-foot"><time :title="formatTime(task.finishedAt || task.createdAt)">{{ task.finishedAt ? `${formatTime(task.finishedAt)} 完成` : `${formatTime(task.createdAt)} 提交` }}</time><div class="activity-task-actions"><button v-if="task.canCancel" type="button" class="activity-cancel" :disabled="!!cancelling || cancelled.has(task.key) || !!error" @click="cancel(task)">{{ cancelled.has(task.key) ? '已请求取消' : cancelling === task.key ? '处理中…' : '取消排队' }}</button><button v-if="task.detailPath" type="button" @click="go(task)">{{ task.status === 'FAILED' ? '查看失败原因' : '查看任务' }}</button></div></div>
+              <div v-if="task.branch" class="activity-task-branch"><span>{{ tUi('分支') }}</span><b>{{ task.branch }}</b></div>
+              <div v-if="section.key === 'running'" class="activity-task-stage"><span><i aria-hidden="true"/>{{ tUi(task.stageLabel) || tUi('正在准备执行') }}</span><time v-if="activityElapsed(task, now)">{{ tUi('已运行 {0}', activityElapsed(task, now)) }}</time></div>
+              <div v-if="task.status === 'PENDING'" class="activity-task-wait"><span>{{ queueWaitText(task.waitingReason) || tUi('等待调度，开始后自动更新') }}</span><time v-if="waitElapsed(task)">{{ tUi('已等待 {0}', waitElapsed(task)) }}</time></div>
+              <p v-if="task.status === 'FAILED'" class="activity-task-failure">{{ activityFailureMessage(task) || tUi('{0}失败，查看任务定位原因。', tUi(task.stageLabel) || activityKind(task)) }}</p>
+              <div class="activity-task-foot"><time :title="formatTime(task.finishedAt || task.createdAt)">{{ task.finishedAt ? tUi('{0} 完成', formatTime(task.finishedAt)) : tUi('{0} 提交', formatTime(task.createdAt)) }}</time><div class="activity-task-actions"><button v-if="task.canCancel" type="button" class="activity-cancel" :disabled="!!cancelling || cancelled.has(task.key) || !!error" @click="cancel(task)">{{ cancelled.has(task.key) ? tUi('已请求取消') : cancelling === task.key ? tUi('处理中…') : tUi('取消排队') }}</button><button v-if="task.detailPath" type="button" @click="go(task)">{{ task.status === 'FAILED' ? tUi('查看失败原因') : tUi('查看任务') }}</button></div></div>
             </template>
-            <p v-else class="activity-hidden-note">当前任务详情不在你的查看权限内。</p>
+            <p v-else class="activity-hidden-note">{{ tUi('当前任务详情不在你的查看权限内。') }}</p>
           </li>
         </ol>
       </section>
-      <div v-if="!feed.recent.length" class="activity-no-results">你最近 24 小时还没有完成的任务。</div>
+      <div v-if="!feed.recent.length" class="activity-no-results">{{ tUi('你最近 24 小时还没有完成的任务。') }}</div>
     </template>
   </el-drawer>
 </template>

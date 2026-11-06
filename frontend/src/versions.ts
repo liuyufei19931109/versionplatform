@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import type { ServiceType } from './types'
 import { hasMenu } from './auth'
 
@@ -63,7 +64,7 @@ export interface VersionLinkPreview {
 }
 
 export function versionStatusLabel(status: string) {
-  return ({ PENDING: '等待创建', RUNNING: '创建中', SUCCESS: '已就绪', FAILED: '创建失败', CONFLICT: '分支冲突', UNKNOWN: '待核对', READY: '可以创建', ALREADY_CREATED: '已就绪，保留原分支', ERROR: '无法创建', PARTIAL: '部分失败', PARTIAL_SUCCESS: '部分失败', EMPTY: '暂无模块' } as Record<string, string>)[status] || status || '待核对'
+  return ({ PENDING: tUi('等待创建'), RUNNING: tUi('创建中'), SUCCESS: tUi('已就绪'), FAILED: tUi('创建失败'), CONFLICT: tUi('分支冲突'), UNKNOWN: tUi('待核对'), READY: tUi('可以创建'), ALREADY_CREATED: tUi('已就绪，保留原分支'), ERROR: tUi('无法创建'), PARTIAL: tUi('部分失败'), PARTIAL_SUCCESS: tUi('部分失败'), EMPTY: tUi('暂无模块') } as Record<string, string>)[status] || status || tUi('待核对')
 }
 export function versionStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
   if (['SUCCESS', 'ALREADY_CREATED', 'READY'].includes(status)) return 'success'
@@ -75,11 +76,11 @@ export function versionBusy(version?: ReleaseVersion | null) {
   return Boolean(version?.items.some(item => ['PENDING', 'RUNNING'].includes(item.status)))
 }
 export function versionSummary(version: ReleaseVersion) {
-  if (!version.items.length) return '没有可查看的模块'
+  if (!version.items.length) return tUi('没有可查看的模块')
   const done = version.items.filter(item => item.status === 'SUCCESS').length
   const failed = version.items.filter(item => ['FAILED', 'CONFLICT', 'UNKNOWN'].includes(item.status)).length
-  if (versionBusy(version)) return `${done} / ${version.items.length} 个模块已就绪`
-  return failed ? `${done} 个已就绪，${failed} 个需处理` : `${done} 个模块已就绪`
+  if (versionBusy(version)) return tUi('{0} / {1} 个模块已就绪', done, version.items.length)
+  return failed ? tUi('{0} 个已就绪，{1} 个需处理', done, failed) : tUi('{0} 个模块已就绪', done)
 }
 export function versionBuildRoute(item: VersionItem) {
   if (item.status !== 'SUCCESS') return undefined

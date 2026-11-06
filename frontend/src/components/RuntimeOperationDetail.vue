@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { errorText, http, payload } from '../api'
 import type { RuntimeOperation } from '../runtime'
@@ -21,10 +23,10 @@ async function load() {
   try {
     const data = payload<RuntimeOperation>(await http.get(`/runtime/restarts/${id}`, { signal: controller.signal }), {} as RuntimeOperation)
     if (disposed || current !== generation || id !== props.operationId) return
-    if (String(data.id) !== id) throw new Error('未读取到该重启记录')
+    if (String(data.id) !== id) throw new Error(tUi('未读取到该重启记录'))
     operation.value = data; error.value = ''
   } catch (reason) {
-    if (!disposed && current === generation) error.value = errorText(reason, '暂时无法读取重启记录')
+    if (!disposed && current === generation) error.value = errorText(reason, tUi('暂时无法读取重启记录'))
   } finally {
     if (!disposed && current === generation) {
       loading.value = false
@@ -41,17 +43,17 @@ onBeforeUnmount(() => { disposed = true; generation++; controller?.abort(); if (
 </script>
 
 <template>
-  <el-drawer v-model="open" :size="'min(680px, 100vw)'" :title="`重启记录 #${operationId}`" class="operation-detail-drawer">
+  <el-drawer v-model="open" :size="'min(680px, 100vw)'" :title="tUi('重启记录 #{0}', operationId)" class="operation-detail-drawer">
     <div class="operation-detail" v-loading="loading && !operation">
-      <el-alert v-if="error" :title="error" type="warning" :closable="false" show-icon><template #default>当前信息可能已过期，请重新读取。<el-button link type="primary" :loading="loading" @click="load">重新读取</el-button></template></el-alert>
+      <el-alert v-if="error" :title="error" type="warning" :closable="false" show-icon><template #default>{{ tUi('当前信息可能已过期，请重新读取。') }}<el-button link type="primary" :loading="loading" @click="load">{{ tUi('重新读取') }}</el-button></template></el-alert>
       <template v-if="operation">
         <div class="operation-detail-heading"><h3>{{operation.serviceName}}</h3><el-tag :type="operation.status === 'FAILED' ? 'danger' : operation.status === 'SUCCESS' ? 'success' : 'info'">{{operationStatus(operation.status)}}</el-tag></div>
-        <dl><dt>发布环境</dt><dd>{{environmentLabel(operation.environmentName)}}</dd><dt>服务器</dt><dd>{{operation.serverName}}</dd><dt>发起人</dt><dd>{{operation.createdBy}}</dd><dt>当前步骤</dt><dd>{{operationStage(operation.currentStage)}}</dd><dt>提交时间</dt><dd>{{formatTime(operation.createdAt)}}</dd><dt v-if="operation.startedAt">开始时间</dt><dd v-if="operation.startedAt">{{formatTime(operation.startedAt)}}</dd><dt v-if="operation.finishedAt">结束时间</dt><dd v-if="operation.finishedAt">{{formatTime(operation.finishedAt)}}</dd></dl>
-        <p v-if="['FAILED','CANCELLED'].includes(operation.status)" class="operation-detail-hint">本次操作可能已执行部分步骤，请结合下方日志和目标容器状态判断结果。</p>
+        <dl><dt>{{ tUi('发布环境') }}</dt><dd>{{environmentLabel(operation.environmentName)}}</dd><dt>{{ tUi('服务器') }}</dt><dd>{{operation.serverName}}</dd><dt>{{ tUi('发起人') }}</dt><dd>{{operation.createdBy}}</dd><dt>{{ tUi('当前步骤') }}</dt><dd>{{operationStage(operation.currentStage)}}</dd><dt>{{ tUi('提交时间') }}</dt><dd>{{formatTime(operation.createdAt)}}</dd><dt v-if="operation.startedAt">{{ tUi('开始时间') }}</dt><dd v-if="operation.startedAt">{{formatTime(operation.startedAt)}}</dd><dt v-if="operation.finishedAt">{{ tUi('结束时间') }}</dt><dd v-if="operation.finishedAt">{{formatTime(operation.finishedAt)}}</dd></dl>
+        <p v-if="['FAILED','CANCELLED'].includes(operation.status)" class="operation-detail-hint">{{ tUi('本次操作可能已执行部分步骤，请结合下方日志和目标容器状态判断结果。') }}</p>
         <el-alert v-if="operation.errorMessage" :title="operation.errorMessage" type="error" :closable="false" show-icon/>
-        <div class="operation-log-heading"><h4>步骤日志</h4><el-button link :loading="loading" @click="load">刷新</el-button></div><pre>{{operation.logText || '任务开始后展示日志。'}}</pre>
+        <div class="operation-log-heading"><h4>{{ tUi('步骤日志') }}</h4><el-button link :loading="loading" @click="load">{{ tUi('刷新') }}</el-button></div><pre>{{operation.logText || tUi('任务开始后展示日志。')}}</pre>
       </template>
-      <p v-else-if="!error" class="operation-detail-hint">正在读取重启记录…</p>
+      <p v-else-if="!error" class="operation-detail-hint">{{ tUi('正在读取重启记录…') }}</p>
     </div>
   </el-drawer>
 </template>

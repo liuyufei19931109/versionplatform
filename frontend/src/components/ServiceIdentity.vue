@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import ServiceIcon from './ServiceIcon.vue'
 
@@ -19,8 +21,8 @@ const props = withDefaults(defineProps<{
 }>(), { detail: '', large: false, showType: true })
 
 const code = computed(() => props.service?.code || props.service?.serviceKey || '')
-const name = computed(() => props.service?.name || props.service?.serviceName || '服务')
-const typeLabel = computed(() => props.service?.serviceType === 'FLUTTER_ANDROID' ? 'Android' : props.service?.serviceType === 'FRONTEND' ? '前端' : props.service?.serviceType === 'BACKEND' ? '后端' : '')
+const name = computed(() => props.service?.name || props.service?.serviceName || tUi('服务'))
+const typeLabel = computed(() => props.service?.serviceType === 'FLUTTER_ANDROID' ? 'Android' : props.service?.serviceType === 'FRONTEND' ? tUi('前端') : props.service?.serviceType === 'BACKEND' ? tUi('后端') : '')
 </script>
 
 <template>

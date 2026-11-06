@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 // Production only accepts an artifact that already deployed successfully to pre-production,
 // or one that already ran in production (rollback). The backend enforces the same rule.
 export interface ProductionReadiness {
@@ -22,7 +23,7 @@ export function productionEligible(readiness?: ProductionReadiness) {
 }
 
 export function readinessBadge(readiness?: ProductionReadiness): { text: string; type: 'success' | 'info' | 'warning' } {
-  if (readiness?.preTaskId) return { text: '预生产已通过', type: 'success' }
-  if (readiness?.prodTaskId) return { text: '曾发布生产', type: 'info' }
-  return { text: '未经预生产', type: 'warning' }
+  if (readiness?.preTaskId) return { text: tUi('预生产已通过'), type: 'success' }
+  if (readiness?.prodTaskId) return { text: tUi('曾发布生产'), type: 'info' }
+  return { text: tUi('未经预生产'), type: 'warning' }
 }

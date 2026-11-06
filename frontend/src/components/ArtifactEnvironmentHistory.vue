@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import { environmentLabel, formatTime, statusLabel } from '../ui'
 import type { DeploymentServer } from '../types'
@@ -11,39 +13,39 @@ const items = computed(() => environments.map(environment => {
   const history = props.entries?.find(entry => entry.environment === environment)
   const latest = history?.latestAttempt
   const success = history?.latestSuccess
-  const label = latest && latest.status !== 'SUCCESS' ? (success ? '已发 · ' : '') + statusLabel(latest.status) : success ? '已发' : '暂无记录'
+  const label = latest && latest.status !== 'SUCCESS' ? (success ? tUi('已发 · ') : '') + statusLabel(latest.status) : success ? tUi('已发') : tUi('暂无记录')
   return { environment, history, label }
 }))
 
 function scope(task: ReleaseStamp) {
-  if (!task.scopeKnown || !task.serverIds.length) return '节点范围待核对'
-  return task.serverIds.map(id => props.servers.find(server => String(server.id) === String(id))?.name || '节点 #' + id).join('、')
+  if (!task.scopeKnown || !task.serverIds.length) return tUi('节点范围待核对')
+  return task.serverIds.map(id => props.servers.find(server => String(server.id) === String(id))?.name || tUi('节点 #') + id).join('、')
 }
 </script>
 
 <template>
-  <div class="environment-history" aria-label="制品发布历史" @click.stop>
-    <span v-if="loading" class="history-message" role="status">正在读取发布历史…</span>
-    <span v-else-if="error" class="history-message">发布历史暂时无法读取 <button type="button" @click.stop="$emit('retry')">重读</button></span>
+  <div class="environment-history" :aria-label="tUi('制品发布历史')" @click.stop>
+    <span v-if="loading" class="history-message" role="status">{{ tUi('正在读取发布历史…') }}</span>
+    <span v-else-if="error" class="history-message">{{ tUi('发布历史暂时无法读取') }} <button type="button" @click.stop="$emit('retry')">{{ tUi('重读') }}</button></span>
     <template v-else v-for="item in items" :key="item.environment">
       <el-popover v-if="item.history" placement="top-start" trigger="click" :width="280">
-        <template #reference><button type="button" class="history-env" :class="{success:item.history.latestSuccess}" :aria-label="environmentLabel(item.environment)+'发布历史，'+item.label">{{environmentLabel(item.environment)}} <b>{{item.label}}</b></button></template>
+        <template #reference><button type="button" class="history-env" :class="{success:item.history.latestSuccess}" :aria-label="environmentLabel(item.environment)+tUi('发布历史，')+item.label">{{environmentLabel(item.environment)}} <b>{{item.label}}</b></button></template>
         <div class="history-detail">
-          <strong>{{environmentLabel(item.environment)}}发布历史</strong>
+          <strong>{{ tUi('{0}发布历史', environmentLabel(item.environment)) }}</strong>
           <template v-if="item.history.latestSuccess">
-            <div><span>最近成功</span><router-link :to="'/releases/'+item.history.latestSuccess.taskId">任务 #{{item.history.latestSuccess.taskId}}</router-link></div>
-            <p>{{formatTime(item.history.latestSuccess.at)}} · {{item.history.latestSuccess.actor || '发起人未记录'}}</p>
+            <div><span>{{ tUi('最近成功') }}</span><router-link :to="'/releases/'+item.history.latestSuccess.taskId">{{ tUi('任务 #{0}', item.history.latestSuccess.taskId) }}</router-link></div>
+            <p>{{formatTime(item.history.latestSuccess.at)}} · {{item.history.latestSuccess.actor || tUi('发起人未记录')}}</p>
             <p>{{scope(item.history.latestSuccess)}}</p>
           </template>
-          <p v-else>暂无成功发布记录</p>
+          <p v-else>{{ tUi('暂无成功发布记录') }}</p>
           <template v-if="item.history.latestAttempt && item.history.latestAttempt.taskId!==item.history.latestSuccess?.taskId">
-            <div><span>最近尝试 · {{statusLabel(item.history.latestAttempt.status)}}</span><router-link :to="'/releases/'+item.history.latestAttempt.taskId">任务 #{{item.history.latestAttempt.taskId}}</router-link></div>
-            <p>{{formatTime(item.history.latestAttempt.at)}} · {{item.history.latestAttempt.actor || '发起人未记录'}}</p>
+            <div><span>{{ tUi('最近尝试 · {0}', statusLabel(item.history.latestAttempt.status)) }}</span><router-link :to="'/releases/'+item.history.latestAttempt.taskId">{{ tUi('任务 #{0}', item.history.latestAttempt.taskId) }}</router-link></div>
+            <p>{{formatTime(item.history.latestAttempt.at)}} · {{item.history.latestAttempt.actor || tUi('发起人未记录')}}</p>
             <p>{{scope(item.history.latestAttempt)}}</p>
           </template>
         </div>
       </el-popover>
-      <span v-else class="history-env empty-env">{{environmentLabel(item.environment)}} 暂无记录</span>
+      <span v-else class="history-env empty-env">{{ tUi('{0} 暂无记录', environmentLabel(item.environment)) }}</span>
     </template>
   </div>
 </template>

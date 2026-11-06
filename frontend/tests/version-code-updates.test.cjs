@@ -1,5 +1,6 @@
-const assert=require('node:assert/strict'),{test}=require('node:test'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
-const sandbox={exports:{},URL};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/versionCodeUpdates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,sandbox);const api=sandbox.exports;
+const { runWithTranslations } = require('../test-support/i18n.cjs')
+const assert=require('node:assert/strict'),{test}=require('node:test'),fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
+const sandbox={exports:{},URL};runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/versionCodeUpdates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,sandbox);const api=sandbox.exports;
 test('GitHub navigation only allows fixed HTTPS PR/commit routes',()=>{
  const valid='https://github.com/example-team/web-app/pull/120';assert.equal(api.githubEventUrl(valid),valid);
  const commit='https://github.com/example-team/web-app/commit/'+'a'.repeat(40);assert.equal(api.githubEventUrl(commit),commit);

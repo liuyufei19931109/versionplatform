@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { normalizeBuildEngine } from '../buildEngine'
 import type { BuildEngine } from '../types'
 
@@ -8,13 +10,13 @@ function update(value: unknown) { emit('update:modelValue', normalizeBuildEngine
 </script>
 
 <template>
-  <el-form-item label="构建方式" class="build-engine-field">
+  <el-form-item :label="tUi('构建方式')" class="build-engine-field">
     <div class="build-engine-setting">
-      <el-radio-group :model-value="normalizeBuildEngine(modelValue)" :disabled="disabled" aria-label="构建方式" @update:model-value="update">
-        <el-radio-button value="GITHUB">GitHub Actions（默认）</el-radio-button>
-        <el-radio-button value="LOCAL">本机构建</el-radio-button>
+      <el-radio-group :model-value="normalizeBuildEngine(modelValue)" :disabled="disabled" :aria-label="tUi('构建方式')" @update:model-value="update">
+        <el-radio-button value="GITHUB">{{ tUi('GitHub Actions（默认）') }}</el-radio-button>
+        <el-radio-button value="LOCAL">{{ tUi('本机构建') }}</el-radio-button>
       </el-radio-group>
-      <p class="build-engine-note"><strong>仅之后新建任务生效</strong>，历史任务重试沿用原方式。全局本机回退开关优先。</p>
+      <p class="build-engine-note"><strong>{{ tUi('仅之后新建任务生效') }}</strong>{{ tUi('，历史任务重试沿用原方式。全局本机回退开关优先。') }}</p>
     </div>
   </el-form-item>
 </template>

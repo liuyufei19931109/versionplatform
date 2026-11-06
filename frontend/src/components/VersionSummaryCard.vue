@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { DocumentChecked, ArrowRight, Refresh } from '@element-plus/icons-vue'
 import { errorText, http, payload } from '../api'
@@ -16,7 +18,7 @@ async function refresh() {
     const result = payload<PublicVersionSummary | null>(await http.get('/version-summaries/latest'), null)
     if (disposed || current !== request) return
     summary.value = result?.id && result.state === 'COMPLETED' ? result : null; error.value = ''
-  } catch (reason) { if (!disposed && current === request) error.value = errorText(reason, '版本小结暂时无法读取') }
+  } catch (reason) { if (!disposed && current === request) error.value = errorText(reason, tUi('版本小结暂时无法读取')) }
   finally { if (!disposed && current === request) { loading.value = false; if (timer) window.clearTimeout(timer); if (props.placement === 'dashboard') timer = window.setTimeout(refresh, 30000) } }
 }
 async function openSummary() {
@@ -29,7 +31,7 @@ async function openSummary() {
     const result = payload<PublicVersionSummary | null>(await http.get(`/version-summaries/${latest.versionId}`), null)
     if (disposed || current !== detailRequest || !opened.value) return
     detail.value = result; summary.value = result; error.value = ''
-  } catch (reason) { if (!disposed && current === detailRequest) detailError.value = errorText(reason, '版本小结暂时无法读取') }
+  } catch (reason) { if (!disposed && current === detailRequest) detailError.value = errorText(reason, tUi('版本小结暂时无法读取')) }
   finally { if (!disposed && current === detailRequest) detailLoading.value = false }
 }
 function closeSummary(value: boolean) { opened.value = value; if (!value) { detailRequest++; detailLoading.value = false } }
@@ -38,20 +40,20 @@ onBeforeUnmount(() => { disposed = true; request++; detailRequest++; if (timer) 
 </script>
 
 <template>
-  <el-button v-if="placement==='header'" class="summary-header-button" text :icon="DocumentChecked" aria-label="版本小结" title="版本小结" @click="openSummary"><span class="summary-header-label">版本小结</span></el-button>
-  <section v-else class="panel completed-version-card" aria-label="最近完成版本">
-    <div class="completed-heading"><div><span class="completed-symbol"><el-icon><DocumentChecked/></el-icon></span><div><h3>最近完成版本</h3><p>版本收尾与交付小结 · 全员可见</p></div></div><el-button v-if="summary" link type="primary" @click="openSummary">查看完整小结<el-icon><ArrowRight/></el-icon></el-button></div>
-    <div v-if="error" class="summary-read-error" role="alert"><span>{{error}}</span><el-button link type="primary" :icon="Refresh" :loading="loading" @click="refresh">重试</el-button></div>
-    <template v-if="summary"><div class="completed-meta"><time>{{summary.versionDate}}</time><el-tag size="small" type="success" effect="plain">已完成</el-tag><span>{{environmentLabel(summary.environment)}}环境</span></div><p class="completed-excerpt">{{summary.summary}}</p><div class="completed-footer"><div class="completed-counts"><span><b>{{summary.counts.published}}</b> 已发布</span><span><b>{{summary.counts.excluded}}</b> 本次不发布</span><span v-if="summary.counts.unconfirmed"><b>{{summary.counts.unconfirmed}}</b> 待确认</span></div><span>{{summary.completedBy}} · {{formatTime(summary.completedAt)}}</span></div></template>
-    <p v-else-if="!error" class="completed-empty">{{loading?'正在读取版本小结…':'还没有完成的版本。管理员完成版本收尾后，小结会展示在这里。'}}</p>
+  <el-button v-if="placement==='header'" class="summary-header-button" text :icon="DocumentChecked" :aria-label="tUi('版本小结')" :title="tUi('版本小结')" @click="openSummary"><span class="summary-header-label">{{ tUi('版本小结') }}</span></el-button>
+  <section v-else class="panel completed-version-card" :aria-label="tUi('最近完成版本')">
+    <div class="completed-heading"><div><span class="completed-symbol"><el-icon><DocumentChecked/></el-icon></span><div><h3>{{ tUi('最近完成版本') }}</h3><p>{{ tUi('版本收尾与交付小结 · 全员可见') }}</p></div></div><el-button v-if="summary" link type="primary" @click="openSummary">{{ tUi('查看完整小结') }}<el-icon><ArrowRight/></el-icon></el-button></div>
+    <div v-if="error" class="summary-read-error" role="alert"><span>{{error}}</span><el-button link type="primary" :icon="Refresh" :loading="loading" @click="refresh">{{ tUi('重试') }}</el-button></div>
+    <template v-if="summary"><div class="completed-meta"><time>{{summary.versionDate}}</time><el-tag size="small" type="success" effect="plain">{{ tUi('已完成') }}</el-tag><span>{{ tUi('{0}环境', environmentLabel(summary.environment)) }}</span></div><p class="completed-excerpt">{{summary.summary}}</p><div class="completed-footer"><div class="completed-counts"><span><b>{{summary.counts.published}}</b> {{ tUi('已发布') }}</span><span><b>{{summary.counts.excluded}}</b> {{ tUi('本次不发布') }}</span><span v-if="summary.counts.unconfirmed"><b>{{summary.counts.unconfirmed}}</b> {{ tUi('待确认') }}</span></div><span>{{summary.completedBy}} · {{formatTime(summary.completedAt)}}</span></div></template>
+    <p v-else-if="!error" class="completed-empty">{{loading?tUi('正在读取版本小结…'):tUi('还没有完成的版本。管理员完成版本收尾后，小结会展示在这里。')}}</p>
   </section>
-  <el-dialog :model-value="opened" title="版本小结" width="740px" class="version-public-summary-dialog" @update:model-value="closeSummary">
+  <el-dialog :model-value="opened" :title="tUi('版本小结')" width="740px" class="version-public-summary-dialog" @update:model-value="closeSummary">
     <div v-loading="detailLoading" class="public-summary-content">
       <el-alert v-if="detailError" :title="detailError" type="error" :closable="false" show-icon/>
-      <template v-else-if="detail"><div class="completed-meta"><time>{{detail.versionDate}}</time><el-tag size="small" :type="detail.state==='COMPLETED'?'success':'info'" effect="plain">{{detail.state==='COMPLETED'?'已完成':'已重新打开'}}</el-tag><span>{{environmentLabel(detail.environment)}}环境</span></div><p class="public-summary-text">{{detail.summary}}</p><div class="public-summary-counts"><div><b>{{detail.counts.published}}</b><span>已发布</span></div><div><b>{{detail.counts.excluded}}</b><span>本次不发布</span></div><div><b>{{detail.counts.unconfirmed}}</b><span>待确认</span></div></div><div class="public-summary-foot"><span>完成人 {{detail.completedBy}} · {{formatTime(detail.completedAt)}}</span><span v-if="detail.actor!==detail.completedBy||detail.createdAt!==detail.completedAt">最近更新 {{detail.actor}} · {{formatTime(detail.createdAt)}}</span><small>此处为管理员确认的小结与当时的发布情况快照。</small></div></template>
-      <p v-else-if="!detailLoading" class="completed-empty">暂无已完成版本的小结。</p>
+      <template v-else-if="detail"><div class="completed-meta"><time>{{detail.versionDate}}</time><el-tag size="small" :type="detail.state==='COMPLETED'?'success':'info'" effect="plain">{{detail.state==='COMPLETED'?tUi('已完成'):tUi('已重新打开')}}</el-tag><span>{{ tUi('{0}环境', environmentLabel(detail.environment)) }}</span></div><p class="public-summary-text">{{detail.summary}}</p><div class="public-summary-counts"><div><b>{{detail.counts.published}}</b><span>{{ tUi('已发布') }}</span></div><div><b>{{detail.counts.excluded}}</b><span>{{ tUi('本次不发布') }}</span></div><div><b>{{detail.counts.unconfirmed}}</b><span>{{ tUi('待确认') }}</span></div></div><div class="public-summary-foot"><span>{{ tUi('完成人 {0} · {1}', detail.completedBy, formatTime(detail.completedAt)) }}</span><span v-if="detail.actor!==detail.completedBy||detail.createdAt!==detail.completedAt">{{ tUi('最近更新 {0} · {1}', detail.actor, formatTime(detail.createdAt)) }}</span><small>{{ tUi('此处为管理员确认的小结与当时的发布情况快照。') }}</small></div></template>
+      <p v-else-if="!detailLoading" class="completed-empty">{{ tUi('暂无已完成版本的小结。') }}</p>
     </div>
-    <template #footer><el-button v-if="detailError" :loading="detailLoading" @click="openSummary">重新读取</el-button><el-button type="primary" @click="closeSummary(false)">知道了</el-button></template>
+    <template #footer><el-button v-if="detailError" :loading="detailLoading" @click="openSummary">{{ tUi('重新读取') }}</el-button><el-button type="primary" @click="closeSummary(false)">{{ tUi('知道了') }}</el-button></template>
   </el-dialog>
 </template>
 

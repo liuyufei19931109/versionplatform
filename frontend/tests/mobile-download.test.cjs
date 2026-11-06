@@ -1,6 +1,7 @@
+const { runWithTranslations } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 
 // Exercise the shipped helper with fake time and a controllable transport, without waiting minutes.
 function setup(expectedBytes = 100) {
@@ -12,7 +13,7 @@ function setup(expectedBytes = 100) {
     clearTimeout(id) { timers.delete(id); },
   };
   const source = fs.readFileSync(path.join(__dirname, '../src/mobileDownload.ts'), 'utf8');
-  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox);
+  runWithTranslations(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox);
   function start(extra = {}) {
     const run = sandbox.exports.createPackageDownload({ expectedBytes, onProgress: value => samples.push(value), request(value) {
       config = value; calls++;

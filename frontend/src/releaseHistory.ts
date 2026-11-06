@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import type { Release } from './types'
 
 export type ReleaseEnvironment = 'dev' | 'test' | 'prod'
@@ -58,7 +59,7 @@ export function historyVersions(records: HistoryEntry[], environment: ReleaseEnv
   for (const entry of records) {
     if (entry.task.environment !== environment || String(entry.task.serviceId) !== serviceId || entry.task.artifactId == null) continue
     const id = String(entry.task.artifactId)
-    if (!unique.has(id)) unique.set(id, { id, label: entry.artifactVersion || `制品 #${id}`, commitId: entry.task.commitId || '', buildTaskId: entry.buildTaskId })
+    if (!unique.has(id)) unique.set(id, { id, label: entry.artifactVersion || tUi('制品 #{0}', id), commitId: entry.task.commitId || '', buildTaskId: entry.buildTaskId })
   }
   return [...unique.values()]
 }

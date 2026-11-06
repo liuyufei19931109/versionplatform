@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -30,10 +32,10 @@ async function loadPreview() {
   try {
     const data = payload<RuntimeRestartPreview>(await http.post('/runtime/restart-preview', {environmentId:row.environmentId,serverId:row.serverId}, {timeout:45000}), null as unknown as RuntimeRestartPreview)
     if (disposed || current !== request || !props.modelValue) return
-    if (!data?.token || !data.containers?.length) throw new Error('目标容器信息不完整，请重新确认')
+    if (!data?.token || !data.containers?.length) throw new Error(tUi('目标容器信息不完整，请重新确认'))
     preview.value = data; now.value = Date.now()
     if (data.environmentName === 'prod') await approval.refresh()
-  } catch (reason) { if (!disposed && current === request) error.value = errorText(reason,'无法确认目标容器') }
+  } catch (reason) { if (!disposed && current === request) error.value = errorText(reason,tUi('无法确认目标容器')) }
   finally { if (!disposed && current === request) loading.value = false }
 }
 async function submit() {
@@ -41,8 +43,8 @@ async function submit() {
   submitting.value = true; error.value = ''
   try {
     const operation = payload<RuntimeOperation>(await http.post('/runtime/restarts',{token:preview.value.token,requestId,totpCode:production.value?code.value:undefined}), null as unknown as RuntimeOperation)
-    if (!operation?.id) throw new Error('未读取到操作编号，请检查操作记录')
-    ElMessage.success(`更新配置并重启 #${operation.id} 已提交`)
+    if (!operation?.id) throw new Error(tUi('未读取到操作编号，请检查操作记录'))
+    ElMessage.success(tUi('更新配置并重启 #{0} 已提交', operation.id))
     emit('submitted',operation); emit('update:modelValue',false)
   } catch (reason) { error.value = errorText(reason); approval.handleError(reason); emit('uncertain') }
   finally { submitting.value = false }
@@ -52,19 +54,19 @@ onBeforeUnmount(() => { disposed = true; request++; window.clearInterval(timer) 
 </script>
 
 <template>
-  <el-dialog v-model="open" title="更新配置并重启" width="600px" :close-on-click-modal="false" :close-on-press-escape="!submitting" :show-close="!submitting" destroy-on-close class="restart-dialog">
+  <el-dialog v-model="open" :title="tUi('更新配置并重启')" width="600px" :close-on-click-modal="false" :close-on-press-escape="!submitting" :show-close="!submitting" destroy-on-close class="restart-dialog">
     <div v-loading="loading" class="restart-content">
-      <p class="restart-intro">读取服务器上最新的 Compose 和环境配置，使用当前镜像重新创建所选服务，完成后检查运行状态。</p>
-      <div class="restart-scope"><span>重新加载 .env / env_file</span><span>保留当前镜像版本</span><span>仅操作所选服务</span></div>
-      <el-alert title="服务会短暂中断。请先保存服务器配置；共用配置修改后，其他受影响服务需分别操作。" type="warning" :closable="false" show-icon/>
-      <dl v-if="row" class="restart-target"><dt>服务</dt><dd>{{preview?.serviceName || row.serviceName}} <small>{{preview?.serviceKey || row.serviceKey}}</small></dd><dt>环境</dt><dd><el-tag :type="production?'danger':'info'" size="small">{{environmentLabel(preview?.environmentName || row.environmentName)}}</el-tag></dd><dt>目标节点</dt><dd>{{preview?.serverName || row.serverName}}<small>{{preview?.host || row.host}}</small></dd></dl>
-      <div v-if="preview" class="restart-containers"><div class="restart-label">已核对 {{preview.containers.length}} 个容器</div><div v-for="container in preview.containers" :key="container.id"><b>{{container.name}}</b><code>{{container.imageReference}}</code><small>{{container.id.slice(0,12)}}</small></div></div>
-      <div v-if="production && preview" class="restart-approval"><h4><el-icon><Lock/></el-icon>生产操作确认</h4><p>请输入当前账号 <b>{{approver}}</b> 的 Google Authenticator 动态码。</p><OtpInput v-model="code" :disabled="submitting || approvalLoading || remaining > 0 || unavailable || !enabled" label="当前账号动态码" @submit="submit"/><p v-if="remaining > 0" class="restart-code-wait">该动态码已使用，{{remaining}} 秒后可输入新动态码。</p><p v-else-if="unavailable || !enabled" class="restart-code-wait">{{unavailable?'无法读取验证状态，请重试。':'当前账号尚未绑定动态码，请先配置二次认证。'}} <el-button v-if="unavailable" link @click="approval.refresh()">重新读取</el-button><el-button v-else link type="primary" @click="open=false; router.push('/settings/security')">绑定我的验证器</el-button></p></div>
-      <el-alert v-if="expired" title="本次确认已过期，请重新核对目标容器。" type="info" :closable="false" show-icon/>
+      <p class="restart-intro">{{ tUi('读取服务器上最新的 Compose 和环境配置，使用当前镜像重新创建所选服务，完成后检查运行状态。') }}</p>
+      <div class="restart-scope"><span>{{ tUi('重新加载 .env / env_file') }}</span><span>{{ tUi('保留当前镜像版本') }}</span><span>{{ tUi('仅操作所选服务') }}</span></div>
+      <el-alert :title="tUi('服务会短暂中断。请先保存服务器配置；共用配置修改后，其他受影响服务需分别操作。')" type="warning" :closable="false" show-icon/>
+      <dl v-if="row" class="restart-target"><dt>{{ tUi('服务') }}</dt><dd>{{preview?.serviceName || row.serviceName}} <small>{{preview?.serviceKey || row.serviceKey}}</small></dd><dt>{{ tUi('环境') }}</dt><dd><el-tag :type="production?'danger':'info'" size="small">{{environmentLabel(preview?.environmentName || row.environmentName)}}</el-tag></dd><dt>{{ tUi('目标节点') }}</dt><dd>{{preview?.serverName || row.serverName}}<small>{{preview?.host || row.host}}</small></dd></dl>
+      <div v-if="preview" class="restart-containers"><div class="restart-label">{{ tUi('已核对 {0} 个容器', preview.containers.length) }}</div><div v-for="container in preview.containers" :key="container.id"><b>{{container.name}}</b><code>{{container.imageReference}}</code><small>{{container.id.slice(0,12)}}</small></div></div>
+      <div v-if="production && preview" class="restart-approval"><h4><el-icon><Lock/></el-icon>{{ tUi('生产操作确认') }}</h4><p>{{ tUi('请输入当前账号') }} <b>{{approver}}</b> {{ tUi('的 Google Authenticator 动态码。') }}</p><OtpInput v-model="code" :disabled="submitting || approvalLoading || remaining > 0 || unavailable || !enabled" :label="tUi('当前账号动态码')" @submit="submit"/><p v-if="remaining > 0" class="restart-code-wait">{{ tUi('该动态码已使用，{0} 秒后可输入新动态码。', remaining) }}</p><p v-else-if="unavailable || !enabled" class="restart-code-wait">{{unavailable?tUi('无法读取验证状态，请重试。'):tUi('当前账号尚未绑定动态码，请先配置二次认证。')}} <el-button v-if="unavailable" link @click="approval.refresh()">{{ tUi('重新读取') }}</el-button><el-button v-else link type="primary" @click="open=false; router.push('/settings/security')">{{ tUi('绑定我的验证器') }}</el-button></p></div>
+      <el-alert v-if="expired" :title="tUi('本次确认已过期，请重新核对目标容器。')" type="info" :closable="false" show-icon/>
       <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="restart-error"/>
-      <el-button v-if="expired || error && !preview" :icon="RefreshRight" :loading="loading" :disabled="submitting" class="restart-retry" @click="loadPreview">重新确认目标</el-button>
+      <el-button v-if="expired || error && !preview" :icon="RefreshRight" :loading="loading" :disabled="submitting" class="restart-retry" @click="loadPreview">{{ tUi('重新确认目标') }}</el-button>
     </div>
-    <template #footer><el-button :disabled="submitting" @click="open=false">取消</el-button><el-button type="primary" :loading="submitting" :disabled="!canSubmit" :icon="RefreshRight" @click="submit">{{production?'确认更新生产配置并重启':'确认更新配置并重启'}}</el-button></template>
+    <template #footer><el-button :disabled="submitting" @click="open=false">{{ tUi('取消') }}</el-button><el-button type="primary" :loading="submitting" :disabled="!canSubmit" :icon="RefreshRight" @click="submit">{{production?tUi('确认更新生产配置并重启'):tUi('确认更新配置并重启')}}</el-button></template>
   </el-dialog>
 </template>
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight, Check, Connection, Plus, Refresh, Search, Warning } from '@element-plus/icons-vue'
@@ -35,11 +37,11 @@ function syncSelectionQuery() { void router.replace({ query: { ...route.query, e
 function resetFilters(updateRoute = true) { serviceId.value = ''; artifactId.value = ''; status.value = ''; keyword.value = ''; page.value = 1; if (updateRoute) syncSelectionQuery() }
 function selectService(value: string, updateRoute = true) { serviceId.value = value; artifactId.value = ''; page.value = 1; if (updateRoute) syncSelectionQuery() }
 function selectEnvironment(value: ReleaseEnvironment) { environment.value = value; syncSelectionQuery() }
-function versionLabel(entry: HistoryEntry) { return entry.artifactVersion || (entry.task.artifactId ? `制品 #${entry.task.artifactId}` : '未记录包版本') }
+function versionLabel(entry: HistoryEntry) { return entry.artifactVersion || (entry.task.artifactId ? tUi('制品 #{0}', entry.task.artifactId) : tUi('未记录包版本')) }
 function scopeLabel(service: HistoryService) {
-  if (service.serviceType === 'FLUTTER_ANDROID') return 'App 安装包交付，以外部发布确认结果为准'
+  if (service.serviceType === 'FLUTTER_ANDROID') return tUi('App 安装包交付，以外部发布确认结果为准')
   const entry = service.latestSuccessful
-  return `${entry?.targetScopeKnown ? `本次发布 ${entry.targetNodeCount} 个节点` : '历史目标范围未记录'} · 当前配置 ${service.nodeCount} 个节点`
+  return tUi('{0} · 当前配置 {1} 个节点', entry?.targetScopeKnown ? tUi('本次发布 {0} 个节点', entry.targetNodeCount) : tUi('历史目标范围未记录'), service.nodeCount)
 }
 function createRelease() {
   router.push({ path: '/release/new', query: { environment: environment.value, ...(serviceId.value ? { serviceId: serviceId.value } : {}) } })
@@ -56,7 +58,7 @@ async function load(silent = false) {
   try {
     const result = payload<ReleaseHistory>(await http.get('/releases/history', { params: { environment: requestedEnvironment }, signal: controller.signal }), { environment: requestedEnvironment, services: [], records: [] })
     if (disposed || current !== request || requestedEnvironment !== environment.value) return
-    if (result.environment !== requestedEnvironment || !Array.isArray(result.services) || !Array.isArray(result.records)) throw new Error('发布记录格式异常，请刷新重试')
+    if (result.environment !== requestedEnvironment || !Array.isArray(result.services) || !Array.isArray(result.records)) throw new Error(tUi('发布记录格式异常，请刷新重试'))
     data.value = { ...result, records: result.records.map(normalizeEntry), services: result.services.map(service => ({ ...service, latestSuccessful: service.latestSuccessful ? normalizeEntry(service.latestSuccessful) : null, latestAttempt: service.latestAttempt ? normalizeEntry(service.latestAttempt) : null })) }
     cancelRequested.value=new Set([...cancelRequested.value].filter(id=>data.value.records.some(entry=>String(entry.task.id)===id&&['PENDING','RUNNING'].includes(String(entry.task.status)))))
     if (serviceId.value && !data.value.services.some(service => String(service.serviceId) === serviceId.value)) selectService('')
@@ -65,7 +67,7 @@ async function load(silent = false) {
     error.value = ''
     if (canReadQueue.value) void refreshQueue()
   } catch (reason) {
-    if (!disposed && current === request) error.value = errorText(reason, '暂时无法读取发布记录')
+    if (!disposed && current === request) error.value = errorText(reason, tUi('暂时无法读取发布记录'))
   } finally {
     if (!disposed && current === request) { loading.value = false; timer = window.setTimeout(() => load(true), 5000) }
   }
@@ -73,9 +75,9 @@ async function load(silent = false) {
 async function cancel(entry: HistoryEntry) {
   if (cancelling.value || cancelRequested.value.has(String(entry.task.id)) || !cancellableTask(entry.task,false)) return
   cancelling.value = String(entry.task.id)
-  try { await ElMessageBox.confirm(cancellationPrompt(entry.task.status), `${cancellationLabel(entry.task.status)} #${entry.task.id}`, { confirmButtonText: cancellationLabel(entry.task.status), cancelButtonText: '继续执行', type: 'warning' }) }
+  try { await ElMessageBox.confirm(cancellationPrompt(entry.task.status), `${cancellationLabel(entry.task.status)} #${entry.task.id}`, { confirmButtonText: cancellationLabel(entry.task.status), cancelButtonText: tUi('继续执行'), type: 'warning' }) }
   catch { cancelling.value = ''; return }
-  try { const result=payload<{message?:string}>(await http.post(`/releases/${entry.task.id}/cancel`),{}); cancelRequested.value.add(String(entry.task.id)); ElMessage.success(result.message || '取消请求已提交，正在等待任务状态更新'); await load(true) }
+  try { const result=payload<{message?:string}>(await http.post(`/releases/${entry.task.id}/cancel`),{}); cancelRequested.value.add(String(entry.task.id)); ElMessage.success(result.message ? tUi(result.message) : tUi('取消请求已提交，正在等待任务状态更新')); await load(true) }
   catch (reason) { ElMessage.error(errorText(reason)) }
   finally { cancelling.value = '' }
 }
@@ -97,59 +99,59 @@ onBeforeUnmount(() => { disposed = true; ++request; controller?.abort(); if (tim
 
 <template>
   <div class="release-history-page">
-    <div class="page-head history-head"><div><h2>发版记录</h2><p>按环境查看服务的发布版本与每一次部署记录。</p></div><el-button v-if="hasMenu('release')" type="primary" :icon="Plus" @click="createRelease">新建发版</el-button></div>
-    <div class="history-environment-bar"><div class="history-environments" role="group" aria-label="选择发布环境"><button v-for="item in environments" :key="item" type="button" :class="{active: environment === item, production: item === 'prod'}" :data-environment="item" :aria-pressed="environment === item" @click="selectEnvironment(item)"><span class="history-env-dot" aria-hidden="true"></span>{{environmentLabel(item)}}</button></div><span class="history-environment-hint">当前查看 <b>{{environmentLabel(environment)}}</b> 环境的发布结果</span></div>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="history-error"><template #default>当前环境可能保留上次读取的记录，请刷新后确认。</template></el-alert>
+    <div class="page-head history-head"><div><h2>{{ tUi('发版记录') }}</h2><p>{{ tUi('按环境查看服务的发布版本与每一次部署记录。') }}</p></div><el-button v-if="hasMenu('release')" type="primary" :icon="Plus" @click="createRelease">{{ tUi('新建发版') }}</el-button></div>
+    <div class="history-environment-bar"><div class="history-environments" role="group" :aria-label="tUi('选择发布环境')"><button v-for="item in environments" :key="item" type="button" :class="{active: environment === item, production: item === 'prod'}" :data-environment="item" :aria-pressed="environment === item" @click="selectEnvironment(item)"><span class="history-env-dot" aria-hidden="true"></span>{{environmentLabel(item)}}</button></div><span class="history-environment-hint">{{ tUi('当前查看') }} <b>{{environmentLabel(environment)}}</b> {{ tUi('环境的发布结果') }}</span></div>
+    <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="history-error"><template #default>{{ tUi('当前环境可能保留上次读取的记录，请刷新后确认。') }}</template></el-alert>
 
     <section class="history-services" aria-labelledby="service-version-heading" v-loading="loading && !data.services.length">
-      <div class="history-section-title"><div><h3 id="service-version-heading">最近成功发布版本</h3><span>{{data.services.length}} 个服务 · 以平台成功记录为准</span></div><el-button v-if="hasMenu('runtime')" link type="primary" :icon="Connection" @click="openRuntime()">查看运行状态</el-button></div>
+      <div class="history-section-title"><div><h3 id="service-version-heading">{{ tUi('最近成功发布版本') }}</h3><span>{{ tUi('{0} 个服务 · 以平台成功记录为准', data.services.length) }}</span></div><el-button v-if="hasMenu('runtime')" link type="primary" :icon="Connection" @click="openRuntime()">{{ tUi('查看运行状态') }}</el-button></div>
       <div v-if="data.services.length" class="history-service-grid">
         <article v-for="service in data.services" :key="service.serviceId" class="history-service-card" :class="{'is-selected':serviceId === String(service.serviceId),'needs-attention':service.latestAttempt?.task.status === 'FAILED'}">
-          <button type="button" class="history-service-select" :aria-pressed="serviceId === String(service.serviceId)" :aria-label="`筛选${service.serviceName}的发布记录`" @click="selectService(serviceId === String(service.serviceId) ? '' : String(service.serviceId))">
+          <button type="button" class="history-service-select" :aria-pressed="serviceId === String(service.serviceId)" :aria-label="tUi('筛选{0}的发布记录', service.serviceName)" @click="selectService(serviceId === String(service.serviceId) ? '' : String(service.serviceId))">
             <div class="history-service-heading"><ServiceIdentity :service="service"/><el-icon v-if="serviceId === String(service.serviceId)" class="history-selected-icon"><Check/></el-icon></div>
             <template v-if="service.latestSuccessful">
-              <div class="history-branch"><span>发布分支</span><strong :title="service.latestSuccessful.task.branch">{{service.latestSuccessful.task.branch || '未记录分支'}}</strong></div>
+              <div class="history-branch"><span>{{ tUi('发布分支') }}</span><strong :title="service.latestSuccessful.task.branch">{{service.latestSuccessful.task.branch || tUi('未记录分支')}}</strong></div>
               <div class="history-completion"><span>{{completionTime(service.latestSuccessful.task).label}}</span><time :datetime="completionTime(service.latestSuccessful.task).value" :title="timeParts(completionTime(service.latestSuccessful.task).value).full"><b>{{timeParts(completionTime(service.latestSuccessful.task).value).time}}</b><span>{{timeParts(completionTime(service.latestSuccessful.task).value).date}}</span></time></div>
             </template>
-            <div v-else class="history-no-version"><span>暂无成功发布</span><small>{{!service.enabled ? '此服务已停用' : !service.configured ? '此环境未配置或未启用' : '首次发布成功后，将在这里展示版本'}}</small></div>
+            <div v-else class="history-no-version"><span>{{ tUi('暂无成功发布') }}</span><small>{{!service.enabled ? tUi('此服务已停用') : !service.configured ? tUi('此环境未配置或未启用') : tUi('首次发布成功后，将在这里展示版本')}}</small></div>
           </button>
-          <div v-if="service.latestSuccessful" class="history-card-meta"><div><CommitHash :value="service.latestSuccessful.task.commitId"/><span>{{service.latestSuccessful.buildTaskId ? `构建 #${service.latestSuccessful.buildTaskId}` : versionLabel(service.latestSuccessful)}}</span></div><div><span>发布人 {{service.latestSuccessful.task.createdBy || '—'}}</span><el-button link type="primary" @click="router.push(`/releases/${service.latestSuccessful.task.id}`)">发布 #{{service.latestSuccessful.task.id}}</el-button></div><p>{{scopeLabel(service)}}</p></div>
-          <div class="history-service-foot"><span v-if="service.latestAttempt?.task.status === 'FAILED'" class="history-attempt-warning"><el-icon><Warning/></el-icon>最近发布失败，请核对运行状态</span><span v-else-if="service.latestAttempt?.task.status === 'RUNNING'" class="history-attempt-progress">有发布正在执行</span><span v-else-if="service.latestAttempt?.task.status === 'PENDING'" class="history-attempt-progress">有发布正在排队</span><span v-else-if="service.latestAttempt?.task.status === 'WAITING_CONFIRMATION'" class="history-attempt-progress">待确认 App 发布结果</span><span v-else-if="!service.enabled">服务已停用</span><span v-else-if="!service.configured">环境未配置或未启用</span><span v-else class="history-attempt-success">{{service.latestSuccessful ? '最近发布成功' : '等待首次发布'}}</span><el-button v-if="hasMenu('runtime') && service.serviceType!=='FLUTTER_ANDROID'" link type="primary" @click="openRuntime(service.serviceId)" :aria-label="`查看${service.serviceName}的运行状态`">运行状态<el-icon><ArrowRight/></el-icon></el-button></div>
+          <div v-if="service.latestSuccessful" class="history-card-meta"><div><CommitHash :value="service.latestSuccessful.task.commitId"/><span>{{service.latestSuccessful.buildTaskId ? tUi('构建 #{0}', service.latestSuccessful.buildTaskId) : versionLabel(service.latestSuccessful)}}</span></div><div><span>{{ tUi('发布人 {0}', service.latestSuccessful.task.createdBy || '—') }}</span><el-button link type="primary" @click="router.push(`/releases/${service.latestSuccessful.task.id}`)">{{ tUi('发布 #{0}', service.latestSuccessful.task.id) }}</el-button></div><p>{{scopeLabel(service)}}</p></div>
+          <div class="history-service-foot"><span v-if="service.latestAttempt?.task.status === 'FAILED'" class="history-attempt-warning"><el-icon><Warning/></el-icon>{{ tUi('最近发布失败，请核对运行状态') }}</span><span v-else-if="service.latestAttempt?.task.status === 'RUNNING'" class="history-attempt-progress">{{ tUi('有发布正在执行') }}</span><span v-else-if="service.latestAttempt?.task.status === 'PENDING'" class="history-attempt-progress">{{ tUi('有发布正在排队') }}</span><span v-else-if="service.latestAttempt?.task.status === 'WAITING_CONFIRMATION'" class="history-attempt-progress">{{ tUi('待确认 App 发布结果') }}</span><span v-else-if="!service.enabled">{{ tUi('服务已停用') }}</span><span v-else-if="!service.configured">{{ tUi('环境未配置或未启用') }}</span><span v-else class="history-attempt-success">{{service.latestSuccessful ? tUi('最近发布成功') : tUi('等待首次发布')}}</span><el-button v-if="hasMenu('runtime') && service.serviceType!=='FLUTTER_ANDROID'" link type="primary" @click="openRuntime(service.serviceId)" :aria-label="tUi('查看{0}的运行状态', service.serviceName)">{{ tUi('运行状态') }}<el-icon><ArrowRight/></el-icon></el-button></div>
         </article>
       </div>
-      <div v-else-if="!loading" class="history-no-services">{{error ? '服务版本暂时无法读取' : '这个环境暂无服务配置或发布记录'}}</div>
-      <p class="history-version-note">版本代表一次成功发布的制品；各节点实际运行情况请在运行总览中检查。</p>
+      <div v-else-if="!loading" class="history-no-services">{{error ? tUi('服务版本暂时无法读取') : tUi('这个环境暂无服务配置或发布记录')}}</div>
+      <p class="history-version-note">{{ tUi('版本代表一次成功发布的制品；各节点实际运行情况请在运行总览中检查。') }}</p>
     </section>
 
     <section class="panel history-records">
-      <div class="history-section-title history-records-title"><div><h3>{{selectedService ? `${selectedService.serviceName} · 发布历史` : '全部服务 · 发布历史'}}</h3><span>{{environmentLabel(environment)}}环境</span></div><el-button text :icon="Refresh" :loading="loading" @click="load()">刷新</el-button></div>
+      <div class="history-section-title history-records-title"><div><h3>{{selectedService ? tUi('{0} · 发布历史', selectedService.serviceName) : tUi('全部服务 · 发布历史')}}</h3><span>{{ tUi('{0}环境', environmentLabel(environment)) }}</span></div><el-button text :icon="Refresh" :loading="loading" @click="load()">{{ tUi('刷新') }}</el-button></div>
       <div class="history-filters">
-        <el-select :model-value="serviceId" clearable placeholder="全部服务" aria-label="筛选服务" @update:model-value="selectService(String($event || ''))"><el-option label="全部服务" value=""/><el-option v-for="service in data.services" :key="service.serviceId" :value="String(service.serviceId)" :label="service.serviceName"/></el-select>
-        <el-select v-model="artifactId" clearable filterable :disabled="!serviceId" :placeholder="serviceId ? '全部包版本' : '先选择服务，再筛选版本'" aria-label="筛选包版本" class="history-version-filter"><el-option v-for="version in versions" :key="version.id" :value="version.id" :label="`${version.label} · ${version.buildTaskId ? `构建 #${version.buildTaskId}` : `制品 #${version.id}`}`"><div class="history-version-option"><span>{{version.label}}</span><small>{{shortCommit(version.commitId)}} · {{version.buildTaskId ? `构建 #${version.buildTaskId}` : `制品 #${version.id}`}}</small></div></el-option></el-select>
-        <el-select v-model="status" clearable placeholder="全部状态" aria-label="筛选发布状态"><el-option v-for="item in statuses" :key="item" :value="item" :label="statusLabel(item)"/></el-select>
-        <el-input v-model="keyword" clearable :prefix-icon="Search" placeholder="搜索任务、分支、Commit" aria-label="搜索发布记录"/>
+        <el-select :model-value="serviceId" clearable :placeholder="tUi('全部服务')" :aria-label="tUi('筛选服务')" @update:model-value="selectService(String($event || ''))"><el-option :label="tUi('全部服务')" value=""/><el-option v-for="service in data.services" :key="service.serviceId" :value="String(service.serviceId)" :label="service.serviceName"/></el-select>
+        <el-select v-model="artifactId" clearable filterable :disabled="!serviceId" :placeholder="serviceId ? tUi('全部包版本') : tUi('先选择服务，再筛选版本')" :aria-label="tUi('筛选包版本')" class="history-version-filter"><el-option v-for="version in versions" :key="version.id" :value="version.id" :label="`${version.label} · ${version.buildTaskId ? tUi('构建 #{0}', version.buildTaskId) : tUi('制品 #{0}', version.id)}`"><div class="history-version-option"><span>{{version.label}}</span><small>{{shortCommit(version.commitId)}} · {{version.buildTaskId ? tUi('构建 #{0}', version.buildTaskId) : tUi('制品 #{0}', version.id)}}</small></div></el-option></el-select>
+        <el-select v-model="status" clearable :placeholder="tUi('全部状态')" :aria-label="tUi('筛选发布状态')"><el-option v-for="item in statuses" :key="item" :value="item" :label="statusLabel(item)"/></el-select>
+        <el-input v-model="keyword" clearable :prefix-icon="Search" :placeholder="tUi('搜索任务、分支、Commit')" :aria-label="tUi('搜索发布记录')"/>
       </div>
       <el-table v-loading="loading" :data="paged" class="clickable-table history-table mobile-replacement-table" @row-click="(entry: HistoryEntry) => router.push(`/releases/${entry.task.id}`)">
-        <el-table-column label="时间 / 任务" width="162"><template #default="{row}"><div class="record-time" :title="timeParts(activityTime(row.task).value).full"><b>{{timeParts(activityTime(row.task).value).time || '—'}}</b><span>{{timeParts(activityTime(row.task).value).date}}</span><small>{{activityTime(row.task).label}} · #{{row.task.id}}</small></div></template></el-table-column>
-        <el-table-column label="服务" min-width="205"><template #default="{row}"><ServiceIdentity :service="row.task"/></template></el-table-column>
-        <el-table-column label="分支 / 版本" min-width="210"><template #default="{row}"><b class="record-branch" :title="row.task.branch">{{row.task.branch || '未记录分支'}}</b><div class="history-table-version-meta" :title="row.imageReference || versionLabel(row)"><CommitHash :value="row.task.commitId"/><span v-if="row.buildTaskId">构建 #{{row.buildTaskId}}</span></div></template></el-table-column>
-        <el-table-column label="发布结果" min-width="145"><template #default="{row}"><el-tag :type="statusType(row.task.status)" size="small">{{statusLabel(row.task.status)}}</el-tag><small v-if="row.task.status === 'PENDING'" class="table-secondary record-queue-note" :title="positionText(row.task.id)">{{positionText(row.task.id)}}</small><small v-else class="table-secondary">{{row.task.deliveryType==='MOBILE'?'App 安装包交付':row.targetScopeKnown ? `${row.targetNodeCount} 个目标节点` : '目标范围未记录'}}</small></template></el-table-column>
-        <el-table-column label="发布人" width="105"><template #default="{row}">{{row.task.createdBy || '—'}}</template></el-table-column>
-        <el-table-column label="操作" width="186" fixed="right"><template #default="{row}"><el-button link type="primary" @click.stop="router.push(`/releases/${row.task.id}`)">详情</el-button><el-button v-if="hasMenu('release') && cancellableTask(row.task,false)" link type="danger" :loading="cancelling === String(row.task.id)" :disabled="cancelRequested.has(String(row.task.id))" @click.stop="cancel(row)">{{cancelRequested.has(String(row.task.id))?'已请求中止':cancellationLabel(row.task.status)}}</el-button></template></el-table-column>
-        <template #empty><div class="empty"><div><span class="empty-symbol">◷</span><strong>{{error ? '暂时无法读取记录' : serviceId || artifactId || status || keyword ? '没有匹配的发布记录' : '这个环境暂无发布记录'}}</strong><p>{{error ? '请稍后刷新重试。' : '可调整筛选条件，或选择其他环境查看。'}}</p><el-button v-if="serviceId || artifactId || status || keyword" link type="primary" @click="resetFilters()">查看全部服务记录</el-button></div></div></template>
+        <el-table-column :label="tUi('时间 / 任务')" width="162"><template #default="{row}"><div class="record-time" :title="timeParts(activityTime(row.task).value).full"><b>{{timeParts(activityTime(row.task).value).time || '—'}}</b><span>{{timeParts(activityTime(row.task).value).date}}</span><small>{{activityTime(row.task).label}} · #{{row.task.id}}</small></div></template></el-table-column>
+        <el-table-column :label="tUi('服务')" min-width="205"><template #default="{row}"><ServiceIdentity :service="row.task"/></template></el-table-column>
+        <el-table-column :label="tUi('分支 / 版本')" min-width="210"><template #default="{row}"><b class="record-branch" :title="row.task.branch">{{row.task.branch || tUi('未记录分支')}}</b><div class="history-table-version-meta" :title="row.imageReference || versionLabel(row)"><CommitHash :value="row.task.commitId"/><span v-if="row.buildTaskId">{{ tUi('构建 #{0}', row.buildTaskId) }}</span></div></template></el-table-column>
+        <el-table-column :label="tUi('发布结果')" min-width="145"><template #default="{row}"><el-tag :type="statusType(row.task.status)" size="small">{{statusLabel(row.task.status)}}</el-tag><small v-if="row.task.status === 'PENDING'" class="table-secondary record-queue-note" :title="positionText(row.task.id)">{{positionText(row.task.id)}}</small><small v-else class="table-secondary">{{row.task.deliveryType==='MOBILE'?tUi('App 安装包交付'):row.targetScopeKnown ? tUi('{0} 个目标节点', row.targetNodeCount) : tUi('目标范围未记录')}}</small></template></el-table-column>
+        <el-table-column :label="tUi('发布人')" width="105"><template #default="{row}">{{row.task.createdBy || '—'}}</template></el-table-column>
+        <el-table-column :label="tUi('操作')" width="186" fixed="right"><template #default="{row}"><el-button link type="primary" @click.stop="router.push(`/releases/${row.task.id}`)">{{ tUi('详情') }}</el-button><el-button v-if="hasMenu('release') && cancellableTask(row.task,false)" link type="danger" :loading="cancelling === String(row.task.id)" :disabled="cancelRequested.has(String(row.task.id))" @click.stop="cancel(row)">{{cancelRequested.has(String(row.task.id))?tUi('已请求中止'):cancellationLabel(row.task.status)}}</el-button></template></el-table-column>
+        <template #empty><div class="empty"><div><span class="empty-symbol">◷</span><strong>{{error ? tUi('暂时无法读取记录') : serviceId || artifactId || status || keyword ? tUi('没有匹配的发布记录') : tUi('这个环境暂无发布记录')}}</strong><p>{{error ? tUi('请稍后刷新重试。') : tUi('可调整筛选条件，或选择其他环境查看。')}}</p><el-button v-if="serviceId || artifactId || status || keyword" link type="primary" @click="resetFilters()">{{ tUi('查看全部服务记录') }}</el-button></div></div></template>
       </el-table>
       <div class="mobile-record-list" v-loading="loading">
         <article v-for="entry in paged" :key="entry.task.id" class="mobile-record">
           <div class="mobile-record-top"><time :title="timeParts(activityTime(entry.task).value).full"><b>{{timeParts(activityTime(entry.task).value).time || '—'}}</b><span>{{timeParts(activityTime(entry.task).value).date}} {{activityTime(entry.task).label}}</span></time><el-tag :type="statusType(entry.task.status)" size="small">{{statusLabel(entry.task.status)}}</el-tag></div>
           <ServiceIdentity :service="entry.task"/>
-          <div class="mobile-record-branch"><span>分支</span><b :title="entry.task.branch">{{entry.task.branch || '未记录分支'}}</b></div>
-          <div class="mobile-record-version"><CommitHash :value="entry.task.commitId"/><span>{{entry.buildTaskId ? `构建 #${entry.buildTaskId}` : versionLabel(entry)}}</span></div>
+          <div class="mobile-record-branch"><span>{{ tUi('分支') }}</span><b :title="entry.task.branch">{{entry.task.branch || tUi('未记录分支')}}</b></div>
+          <div class="mobile-record-version"><CommitHash :value="entry.task.commitId"/><span>{{entry.buildTaskId ? tUi('构建 #{0}', entry.buildTaskId) : versionLabel(entry)}}</span></div>
           <p v-if="entry.task.status === 'PENDING'" class="mobile-record-note">{{positionText(entry.task.id)}}</p>
-          <div class="mobile-record-foot"><span>#{{entry.task.id}} · {{entry.task.createdBy || '—'}}</span><div><el-button v-if="hasMenu('release') && cancellableTask(entry.task,false)" link type="danger" :loading="cancelling === String(entry.task.id)" :disabled="cancelRequested.has(String(entry.task.id))" @click="cancel(entry)">{{cancelRequested.has(String(entry.task.id))?'已请求中止':cancellationLabel(entry.task.status)}}</el-button><el-button link type="primary" @click="router.push(`/releases/${entry.task.id}`)">查看详情</el-button></div></div>
+          <div class="mobile-record-foot"><span>#{{entry.task.id}} · {{entry.task.createdBy || '—'}}</span><div><el-button v-if="hasMenu('release') && cancellableTask(entry.task,false)" link type="danger" :loading="cancelling === String(entry.task.id)" :disabled="cancelRequested.has(String(entry.task.id))" @click="cancel(entry)">{{cancelRequested.has(String(entry.task.id))?tUi('已请求中止'):cancellationLabel(entry.task.status)}}</el-button><el-button link type="primary" @click="router.push(`/releases/${entry.task.id}`)">{{ tUi('查看详情') }}</el-button></div></div>
         </article>
-        <div v-if="!paged.length" class="empty"><div><strong>{{error ? '暂时无法读取记录' : '没有匹配的发布记录'}}</strong><p>{{error ? '请稍后刷新重试。' : '可调整筛选条件，或选择其他环境查看。'}}</p><el-button v-if="serviceId || artifactId || status || keyword" link type="primary" @click="resetFilters()">查看全部服务记录</el-button></div></div>
+        <div v-if="!paged.length" class="empty"><div><strong>{{error ? tUi('暂时无法读取记录') : tUi('没有匹配的发布记录')}}</strong><p>{{error ? tUi('请稍后刷新重试。') : tUi('可调整筛选条件，或选择其他环境查看。')}}</p><el-button v-if="serviceId || artifactId || status || keyword" link type="primary" @click="resetFilters()">{{ tUi('查看全部服务记录') }}</el-button></div></div>
       </div>
-      <div class="table-footer"><span>共 {{filtered.length}} 条记录 <el-button v-if="serviceId" link type="primary" @click="selectService('')">全部服务</el-button></span><el-pagination v-if="filtered.length" v-model:current-page="page" :total="filtered.length" :page-size="12" layout="prev, pager, next"/></div>
+      <div class="table-footer"><span>{{ tUi('共 {0} 条记录', filtered.length) }}<el-button v-if="serviceId" link type="primary" @click="selectService('')">{{ tUi('全部服务') }}</el-button></span><el-pagination v-if="filtered.length" v-model:current-page="page" :total="filtered.length" :page-size="12" layout="prev, pager, next"/></div>
     </section>
   </div>
 </template>

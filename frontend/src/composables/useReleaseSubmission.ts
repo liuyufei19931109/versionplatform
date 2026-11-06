@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { useAppScope } from './useAppScope'
 import { ref } from 'vue'
 import { http, payload } from '../api'
@@ -25,7 +26,7 @@ export function useReleaseSubmission() {
       const endpoint = mobile ? '/mobile/releases' : '/releases'
       const request = mobile ? { serviceId: body.serviceId, artifactId: body.artifactId, environmentName: body.environment, releaseNote: body.releaseNote, totpCode, requestId } : { ...body, totpCode, requestId, confirmationToken }
       const task = payload<{ id?: number | string }>(await http.post(api(endpoint), request), {})
-      if (!task.id) throw new Error('未读取到发版任务编号，请先检查发版记录后再重试')
+      if (!task.id) throw new Error(tUi('未读取到发版任务编号，请先检查发版记录后再重试'))
       return task
     } finally { submitting.value = false }
   }

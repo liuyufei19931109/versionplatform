@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import type { ServiceType } from './types'
 
 export type CompletionState = 'OPEN' | 'COMPLETED'
@@ -46,11 +47,11 @@ export interface VersionCompletion extends Omit<PublicVersionSummary, 'state'> {
 export interface CompletionDetail { versionId: number; state: CompletionState; current: VersionCompletion | null; history: VersionCompletion[] }
 
 export function completionOutcomeLabel(item: CompletionItem) {
-  if (item.outcome === 'PUBLISHED') return '已发布'
-  if (item.outcome === 'EXCLUDED') return '本次不发布'
-  if (item.taskStatus === 'FAILED') return '发布失败 · 待确认'
-  if (item.taskStatus === 'RUNNING' || item.taskStatus === 'PENDING') return '发布处理中 · 待确认'
-  return '待确认'
+  if (item.outcome === 'PUBLISHED') return tUi('已发布')
+  if (item.outcome === 'EXCLUDED') return tUi('本次不发布')
+  if (item.taskStatus === 'FAILED') return tUi('发布失败 · 待确认')
+  if (item.taskStatus === 'RUNNING' || item.taskStatus === 'PENDING') return tUi('发布处理中 · 待确认')
+  return tUi('待确认')
 }
 export function completionOutcomeType(item: CompletionItem): 'success' | 'info' | 'danger' | 'warning' {
   return item.outcome === 'PUBLISHED' ? 'success' : item.outcome === 'EXCLUDED' ? 'info' : item.taskStatus === 'FAILED' ? 'danger' : 'warning'

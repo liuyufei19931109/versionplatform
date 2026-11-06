@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 import type { Release } from './types'
 import { authUser } from './auth'
 
@@ -6,5 +7,5 @@ export function cancellableTask(task: Release, build: boolean) {
   return (build || ownsTask(task)) && (build || task.deliveryType !== 'MOBILE') && (task.status === 'PENDING' || ((!build || task.mobileBuildEngine === 'GITHUB' || task.frontendBuildEngine === 'GITHUB' || task.backendBuildEngine === 'GITHUB') && task.status === 'RUNNING'))
 }
 export function ownsTask(task: {createdBy?: string}) { return Boolean(authUser.value?.admin || (task.createdBy && authUser.value?.username === task.createdBy)) }
-export function cancellationLabel(status?: string) { return status === 'RUNNING' ? '中止后续步骤' : '取消排队' }
-export function cancellationPrompt(status?: string) { return status === 'RUNNING' ? runningCancellationMessage : '任务尚未开始。确认取消排队？' }
+export function cancellationLabel(status?: string) { return status === 'RUNNING' ? tUi('中止后续步骤') : tUi('取消排队') }
+export function cancellationPrompt(status?: string) { return status === 'RUNNING' ? tUi(runningCancellationMessage) : tUi('任务尚未开始。确认取消排队？') }

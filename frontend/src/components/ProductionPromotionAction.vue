@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArtifactHistory } from '../composables/useDeploymentReview'
@@ -18,9 +20,9 @@ function chooseTargets() {
 
 <template>
   <span class="production-actions">
-    <el-button v-if="pending" type="primary" @click="router.push('/releases/'+pending.taskId)">查看生产任务 #{{pending.taskId}}</el-button>
-    <el-button v-else-if="production?.latestSuccess" type="primary" @click="router.push('/releases/'+production.latestSuccess.taskId)">查看生产记录 #{{production.latestSuccess.taskId}}</el-button>
-    <el-button :link="Boolean(pending || production?.latestSuccess)" :loading="loading" type="primary" @click="chooseTargets">{{pending?'选择其他生产节点':production?.latestSuccess?'再次发布到生产':error?'核对并发布到生产':'发布到生产'}}</el-button>
+    <el-button v-if="pending" type="primary" @click="router.push('/releases/'+pending.taskId)">{{ tUi('查看生产任务 #{0}', pending.taskId) }}</el-button>
+    <el-button v-else-if="production?.latestSuccess" type="primary" @click="router.push('/releases/'+production.latestSuccess.taskId)">{{ tUi('查看生产记录 #{0}', production.latestSuccess.taskId) }}</el-button>
+    <el-button :link="Boolean(pending || production?.latestSuccess)" :loading="loading" type="primary" @click="chooseTargets">{{pending?tUi('选择其他生产节点'):production?.latestSuccess?tUi('再次发布到生产'):error?tUi('核对并发布到生产'):tUi('发布到生产')}}</el-button>
   </span>
 </template>
 

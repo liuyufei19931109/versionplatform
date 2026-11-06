@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { authUser, hasMenu } from '../auth'
 import { errorText, http, payload } from '../api'
@@ -30,7 +31,7 @@ export function useGitEvents() {
         if (disposed || request !== generation) return
         feed.value = result; error.value = ''
       } catch (reason) {
-        if (!disposed && request === generation && !abort.signal.aborted) error.value = errorText(reason, 'Git 动态暂时无法读取')
+        if (!disposed && request === generation && !abort.signal.aborted) error.value = errorText(reason, tUi('Git 动态暂时无法读取'))
       } finally {
         if (!disposed && request === generation) { loading.value = false; pending = undefined; controller = undefined; schedule() }
       }
@@ -46,7 +47,7 @@ export function useGitEvents() {
       if (disposed || request !== generation) return
       acknowledged.value = new Set([...acknowledged.value, ...eventIds]); readError.value = ''
     } catch {
-      if (!disposed && request === generation && !abort.signal.aborted) readError.value = '已读状态未保存，稍后重新打开可重试。'
+      if (!disposed && request === generation && !abort.signal.aborted) readError.value = tUi('已读状态未保存，稍后重新打开可重试。')
     } finally { readControllers.delete(abort) }
   }
   function visibilityChanged() { if (document.visibilityState === 'hidden') stopTimer(); else void refresh() }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi, currentLocale } from '../i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh, Plus, ArrowRight, Files, Promotion, Connection, CircleCheck, Warning } from '@element-plus/icons-vue'
@@ -16,7 +18,7 @@ const { queue, summary, refreshQueue } = useQueue()
 const pendingCount = computed(() => queue.value ? queue.value.pendingCount + (queue.value.pendingRuntimeOperations || 0) : null)
 const localBusy = computed(() => Boolean(queue.value?.runningTaskId || queue.value?.runningRuntimeOperation))
 let timer: number | undefined, disposed = false, fetching = false
-const day = computed(() => new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }))
+const day = computed(() => new Date().toLocaleDateString(currentLocale(), { month: 'long', day: 'numeric', weekday: 'long' }))
 const cloudCount = computed(() => queue.value?.cloudRunningTasks?.length || 0)
 const executorBusy = computed(() => !!queue.value?.runningTaskId || !!queue.value?.runningRuntimeOperation || cloudCount.value > 0)
 const currentTaskPath = computed(() => queue.value?.runningTaskId ? `/${queue.value.runningTaskKind === 'BUILD' ? 'builds' : 'releases'}/${queue.value.runningTaskId}` : '')
@@ -24,7 +26,7 @@ async function load(silent = false) {
   if (fetching) return; fetching = true; if (!silent) loading.value = true
   const results = await Promise.allSettled([http.get('/dashboard'), http.get('/health'), refreshQueue()])
   const dashboard = results[0], healthResult = results[1]
-  if (dashboard.status === 'fulfilled') { data.value = payload<Record<string, unknown>>(dashboard.value, {}); recent.value = Array.isArray(data.value.recentReleases) ? (data.value.recentReleases as Record<string, unknown>[]).map(normalizeRelease) : []; failed.value = false; updated.value = new Date().toLocaleTimeString('zh-CN', { hour12: false }) } else { failed.value = true; data.value = {} }
+  if (dashboard.status === 'fulfilled') { data.value = payload<Record<string, unknown>>(dashboard.value, {}); recent.value = Array.isArray(data.value.recentReleases) ? (data.value.recentReleases as Record<string, unknown>[]).map(normalizeRelease) : []; failed.value = false; updated.value = new Date().toLocaleTimeString(currentLocale(), { hour12: false }) } else { failed.value = true; data.value = {} }
   health.value = healthResult.status === 'fulfilled' ? String(payload<Record<string, unknown>>(healthResult.value, {}).status || 'UNKNOWN') : 'UNAVAILABLE'
   fetching = false; loading.value = false; if (timer) window.clearTimeout(timer); if (!disposed) timer = window.setTimeout(() => load(true), 15000)
 }
@@ -34,58 +36,58 @@ onMounted(() => load()); onBeforeUnmount(() => { disposed = true; if (timer) win
 <template>
   <div class="delivery-dashboard">
     <div class="page-head dashboard-head">
-      <div><h2>交付工作台</h2><p>{{day}}<span class="dashboard-date-divider" aria-hidden="true"></span>版本进展、执行任务与最近交付</p></div>
-      <div class="actions"><el-button :icon="Refresh" :loading="loading" @click="load()">刷新</el-button><el-button v-if="hasMenu('builds')" type="primary" :icon="Plus" @click="router.push('/build/new')">新建打包</el-button></div>
+      <div><h2>{{ tUi('交付工作台') }}</h2><p>{{day}}<span class="dashboard-date-divider" aria-hidden="true"></span>{{ tUi('版本进展、执行任务与最近交付') }}</p></div>
+      <div class="actions"><el-button :icon="Refresh" :loading="loading" @click="load()">{{ tUi('刷新') }}</el-button><el-button v-if="hasMenu('builds')" type="primary" :icon="Plus" @click="router.push('/build/new')">{{ tUi('新建打包') }}</el-button></div>
     </div>
-    <el-alert v-if="failed" title="运行概况暂时无法读取，请稍后刷新。" type="error" :closable="false" show-icon class="dashboard-error"/>
+    <el-alert v-if="failed" :title="tUi('运行概况暂时无法读取，请稍后刷新。')" type="error" :closable="false" show-icon class="dashboard-error"/>
 
-    <section class="dashboard-metrics" aria-label="今日交付概况" :aria-busy="loading">
-      <div class="dashboard-metric"><span>服务总数</span><strong>{{data.serviceCount ?? '—'}}<small>个</small></strong><p>已纳入平台管理</p></div>
-      <div class="dashboard-metric"><span>今日打包</span><strong>{{data.todayBuildCount ?? '—'}}<small>次</small></strong><p>今日创建的构建任务</p></div>
-      <div class="dashboard-metric"><span>今日发版</span><strong>{{data.todayReleaseCount ?? '—'}}<small>次</small></strong><p>今日创建的发布任务</p></div>
-      <div class="dashboard-metric" :class="{'has-failures':Number(data.todayFailedCount)>0}"><span>今日失败<el-icon v-if="Number(data.todayFailedCount)>0"><Warning/></el-icon></span><strong>{{data.todayFailedCount ?? '—'}}<small>次</small></strong><p>构建与发布任务</p></div>
+    <section class="dashboard-metrics" :aria-label="tUi('今日交付概况')" :aria-busy="loading">
+      <div class="dashboard-metric"><span>{{ tUi('服务总数') }}</span><strong>{{data.serviceCount ?? '—'}}<small>{{ tUi('个') }}</small></strong><p>{{ tUi('已纳入平台管理') }}</p></div>
+      <div class="dashboard-metric"><span>{{ tUi('今日打包') }}</span><strong>{{data.todayBuildCount ?? '—'}}<small>{{ tUi('次') }}</small></strong><p>{{ tUi('今日创建的构建任务') }}</p></div>
+      <div class="dashboard-metric"><span>{{ tUi('今日发版') }}</span><strong>{{data.todayReleaseCount ?? '—'}}<small>{{ tUi('次') }}</small></strong><p>{{ tUi('今日创建的发布任务') }}</p></div>
+      <div class="dashboard-metric" :class="{'has-failures':Number(data.todayFailedCount)>0}"><span>{{ tUi('今日失败') }}<el-icon v-if="Number(data.todayFailedCount)>0"><Warning/></el-icon></span><strong>{{data.todayFailedCount ?? '—'}}<small>{{ tUi('次') }}</small></strong><p>{{ tUi('构建与发布任务') }}</p></div>
     </section>
 
     <LatestVersionCard v-if="hasMenu('versions')"/>
 
     <div class="dashboard-workspace">
       <section class="panel dashboard-releases">
-        <div class="dashboard-section-heading"><div><h3>最近发版</h3><p>按时间查看最新部署结果</p></div><el-button v-if="hasMenu('releases')" link type="primary" @click="router.push('/releases')">全部记录<el-icon><ArrowRight/></el-icon></el-button></div>
+        <div class="dashboard-section-heading"><div><h3>{{ tUi('最近发版') }}</h3><p>{{ tUi('按时间查看最新部署结果') }}</p></div><el-button v-if="hasMenu('releases')" link type="primary" @click="router.push('/releases')">{{ tUi('全部记录') }}<el-icon><ArrowRight/></el-icon></el-button></div>
         <div v-if="recent.length" class="dashboard-release-list" :aria-busy="loading">
-          <div class="dashboard-release-head" aria-hidden="true"><span>服务与分支</span><span>发起时间 / 发起人</span><span>状态</span><span></span></div>
+          <div class="dashboard-release-head" aria-hidden="true"><span>{{ tUi('服务与分支') }}</span><span>{{ tUi('发起时间 / 发起人') }}</span><span>{{ tUi('状态') }}</span><span></span></div>
           <article v-for="row in recent.slice(0,5)" :key="row.id" class="dashboard-release-row">
             <div class="dashboard-release-service"><ServiceIdentity :service="row" :detail="row.branch || '—'"/><span class="dashboard-environment" :class="`env-${row.environment}`">{{environmentLabel(row.environment)}}</span></div>
-            <div class="dashboard-release-time"><time :datetime="row.createdAt" :title="timeParts(row.createdAt).full"><strong>{{timeParts(row.createdAt).time || '—'}}</strong><span>{{timeParts(row.createdAt).date}}</span></time><small>{{row.createdBy || '未记录发起人'}}</small></div>
+            <div class="dashboard-release-time"><time :datetime="row.createdAt" :title="timeParts(row.createdAt).full"><strong>{{timeParts(row.createdAt).time || '—'}}</strong><span>{{timeParts(row.createdAt).date}}</span></time><small>{{row.createdBy || tUi('未记录发起人')}}</small></div>
             <el-tag size="small" :type="statusType(row.status)" effect="light">{{statusLabel(row.status)}}</el-tag>
-            <el-button link type="primary" :aria-label="`查看 ${row.serviceName || row.serviceKey || '服务'} 发版 #${row.id}`" @click="router.push(`/releases/${row.id}`)">查看</el-button>
+            <el-button link type="primary" :aria-label="tUi('查看 {0} 发版 #{1}', row.serviceName || row.serviceKey || tUi('服务'), row.id)" @click="router.push(`/releases/${row.id}`)">{{ tUi('查看') }}</el-button>
           </article>
         </div>
-        <div v-else class="dashboard-record-empty" role="status"><span class="dashboard-empty-icon"><el-icon><Promotion/></el-icon></span><strong>{{loading ? '正在读取发版记录…' : failed ? '暂时无法读取记录' : '还没有发版记录'}}</strong><p>{{failed ? '请刷新后重新读取最近的部署结果。' : '完成第一次发布后，可在这里查看服务、分支和结果。'}}</p><el-button v-if="!loading&&!failed&&hasMenu('release')" @click="router.push('/release/new')">新建发版</el-button></div>
-        <div class="dashboard-record-foot"><span>展示最近 {{Math.min(recent.length,5)}} 条记录</span><span>{{updated ? `更新于 ${updated}` : '等待数据更新'}}</span></div>
+        <div v-else class="dashboard-record-empty" role="status"><span class="dashboard-empty-icon"><el-icon><Promotion/></el-icon></span><strong>{{loading ? tUi('正在读取发版记录…') : failed ? tUi('暂时无法读取记录') : tUi('还没有发版记录')}}</strong><p>{{failed ? tUi('请刷新后重新读取最近的部署结果。') : tUi('完成第一次发布后，可在这里查看服务、分支和结果。')}}</p><el-button v-if="!loading&&!failed&&hasMenu('release')" @click="router.push('/release/new')">{{ tUi('新建发版') }}</el-button></div>
+        <div class="dashboard-record-foot"><span>{{ tUi('展示最近 {0} 条记录', Math.min(recent.length,5)) }}</span><span>{{updated ? tUi('更新于 {0}', updated) : tUi('等待数据更新')}}</span></div>
       </section>
 
-      <aside class="dashboard-status-column" aria-label="执行与平台状态">
+      <aside class="dashboard-status-column" :aria-label="tUi('执行与平台状态')">
         <section class="panel dashboard-execution">
-          <div class="dashboard-section-heading"><h3>执行队列</h3><span class="dashboard-live-state" :class="{busy:executorBusy, unavailable:!queue}"><i aria-hidden="true"></i>{{!queue ? '待读取' : executorBusy ? '执行中' : '空闲'}}</span></div>
+          <div class="dashboard-section-heading"><h3>{{ tUi('执行队列') }}</h3><span class="dashboard-live-state" :class="{busy:executorBusy, unavailable:!queue}"><i aria-hidden="true"></i>{{!queue ? tUi('待读取') : executorBusy ? tUi('执行中') : tUi('空闲')}}</span></div>
           <div class="dashboard-executor-counts">
-            <div><span>云端构建</span><b>{{queue ? cloudCount : '—'}}<small v-if="queue"> / {{queue.cloudConcurrency || 0}}</small></b></div>
-            <div><span>本机任务</span><b>{{queue ? localBusy ? '1' : '0' : '—'}}<small v-if="queue"> / 1</small></b></div>
-            <div><span>等待执行</span><b>{{pendingCount ?? '—'}}</b></div>
+            <div><span>{{ tUi('云端构建') }}</span><b>{{queue ? cloudCount : '—'}}<small v-if="queue"> / {{queue.cloudConcurrency || 0}}</small></b></div>
+            <div><span>{{ tUi('本机任务') }}</span><b>{{queue ? localBusy ? '1' : '0' : '—'}}<small v-if="queue"> / 1</small></b></div>
+            <div><span>{{ tUi('等待执行') }}</span><b>{{pendingCount ?? '—'}}</b></div>
           </div>
           <p class="dashboard-queue-summary">{{summary}}</p>
-          <div class="dashboard-execution-foot"><span>云端并行，本机重步骤依次执行</span><el-button v-if="currentTaskPath" link type="primary" @click="router.push(currentTaskPath)">当前任务<el-icon><ArrowRight/></el-icon></el-button></div>
+          <div class="dashboard-execution-foot"><span>{{ tUi('云端并行，本机重步骤依次执行') }}</span><el-button v-if="currentTaskPath" link type="primary" @click="router.push(currentTaskPath)">{{ tUi('当前任务') }}<el-icon><ArrowRight/></el-icon></el-button></div>
         </section>
 
         <section class="panel dashboard-health">
-          <div class="dashboard-section-heading"><h3>平台连接</h3><el-icon :class="health==='UP'?'health-ok':'health-unknown'"><CircleCheck v-if="health==='UP'"/><Connection v-else/></el-icon></div>
-          <div class="dashboard-health-row"><span>接口服务</span><strong :class="{'health-ok':health==='UP'}">{{health==='UP'?'在线':health==='UNAVAILABLE'?'连接异常':'正在读取'}}</strong></div>
-          <div class="dashboard-health-row"><span>刷新时间</span><time>{{updated || '—'}}</time></div>
-          <button v-if="hasMenu('runtime')" type="button" class="dashboard-runtime-link" @click="router.push('/runtime')"><span><el-icon><Connection/></el-icon><b>查看服务运行状态</b></span><el-icon><ArrowRight/></el-icon></button>
+          <div class="dashboard-section-heading"><h3>{{ tUi('平台连接') }}</h3><el-icon :class="health==='UP'?'health-ok':'health-unknown'"><CircleCheck v-if="health==='UP'"/><Connection v-else/></el-icon></div>
+          <div class="dashboard-health-row"><span>{{ tUi('接口服务') }}</span><strong :class="{'health-ok':health==='UP'}">{{health==='UP'?tUi('在线'):health==='UNAVAILABLE'?tUi('连接异常'):tUi('正在读取')}}</strong></div>
+          <div class="dashboard-health-row"><span>{{ tUi('刷新时间') }}</span><time>{{updated || '—'}}</time></div>
+          <button v-if="hasMenu('runtime')" type="button" class="dashboard-runtime-link" @click="router.push('/runtime')"><span><el-icon><Connection/></el-icon><b>{{ tUi('查看服务运行状态') }}</b></span><el-icon><ArrowRight/></el-icon></button>
         </section>
 
-        <section v-if="hasMenu('builds')||hasMenu('release')" class="dashboard-shortcuts" aria-label="交付操作">
-          <button v-if="hasMenu('builds')" type="button" @click="router.push('/build/new')"><span class="dashboard-shortcut-icon"><el-icon><Files/></el-icon></span><span><strong>新建打包</strong><small>确认分支，生成制品</small></span><el-icon><ArrowRight/></el-icon></button>
-          <button v-if="hasMenu('release')" type="button" @click="router.push('/release/new')"><span class="dashboard-shortcut-icon release"><el-icon><Promotion/></el-icon></span><span><strong>新建发版</strong><small>选择制品，部署到环境</small></span><el-icon><ArrowRight/></el-icon></button>
+        <section v-if="hasMenu('builds')||hasMenu('release')" class="dashboard-shortcuts" :aria-label="tUi('交付操作')">
+          <button v-if="hasMenu('builds')" type="button" @click="router.push('/build/new')"><span class="dashboard-shortcut-icon"><el-icon><Files/></el-icon></span><span><strong>{{ tUi('新建打包') }}</strong><small>{{ tUi('确认分支，生成制品') }}</small></span><el-icon><ArrowRight/></el-icon></button>
+          <button v-if="hasMenu('release')" type="button" @click="router.push('/release/new')"><span class="dashboard-shortcut-icon release"><el-icon><Promotion/></el-icon></span><span><strong>{{ tUi('新建发版') }}</strong><small>{{ tUi('选择制品，部署到环境') }}</small></span><el-icon><ArrowRight/></el-icon></button>
         </section>
       </aside>
     </div>

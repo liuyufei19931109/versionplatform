@@ -1,3 +1,4 @@
+import { tUi, currentLocale } from './i18n'
 export interface GitEventService {
   id: number
   name: string
@@ -37,13 +38,13 @@ export function githubEventUrl(value: unknown): string {
 }
 
 export function normalizeGitEvents(value: unknown): GitEventFeed {
-  if (!value || typeof value !== 'object' || typeof (value as GitEventFeed).enabled !== 'boolean' || !Array.isArray((value as GitEventFeed).items)) throw new Error('Git 动态返回格式不完整')
+  if (!value || typeof value !== 'object' || typeof (value as GitEventFeed).enabled !== 'boolean' || !Array.isArray((value as GitEventFeed).items)) throw new Error(tUi('Git 动态返回格式不完整'))
   const raw = value as Partial<GitEventFeed>
   if (!raw.enabled) return emptyGitEvents()
   const items = (Array.isArray(raw.items) ? raw.items : []).flatMap(item => {
     if (!item || !Number.isSafeInteger(item.id) || item.id < 1 || !Array.isArray(item.services)) return []
     const services = item.services.filter(service => service && Number.isSafeInteger(service.id) && service.id > 0).map(service => ({
-      id: service.id, name: String(service.name || service.serviceKey || '未命名服务'), serviceKey: String(service.serviceKey || ''),
+      id: service.id, name: String(service.name || service.serviceKey || tUi('未命名服务')), serviceKey: String(service.serviceKey || ''),
       serviceType: String(service.serviceType || ''), canBuild: service.canBuild === true,
     }))
     if (!services.length) return []
@@ -71,10 +72,10 @@ export function gitEventReadThrough(items: GitEvent[]) {
 
 export function gitEventTime(value: string, now = Date.now()) {
   const timestamp = Date.parse(value)
-  if (!Number.isFinite(timestamp)) return '时间未知'
+  if (!Number.isFinite(timestamp)) return tUi('时间未知')
   const elapsed = Math.max(0, now - timestamp)
-  if (elapsed < 60_000) return '刚刚'
-  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} 分钟前`
-  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} 小时前`
-  return new Date(timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+  if (elapsed < 60_000) return tUi('刚刚')
+  if (elapsed < 3_600_000) return tUi('{0} 分钟前', Math.floor(elapsed / 60_000))
+  if (elapsed < 86_400_000) return tUi('{0} 小时前', Math.floor(elapsed / 3_600_000))
+  return new Date(timestamp).toLocaleString(currentLocale(), { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
 }

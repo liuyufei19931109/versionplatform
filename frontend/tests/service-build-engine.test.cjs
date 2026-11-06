@@ -1,6 +1,7 @@
+const { runWithTranslations } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 
 const modules = new Map();
 function load(name) {
@@ -10,7 +11,7 @@ function load(name) {
     if (id.startsWith('./')) return load(id.slice(2));
     return require(id);
   } };
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, `../src/${name}.ts`), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, context);
+  runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname, `../src/${name}.ts`), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, context);
   modules.set(name, context.exports);
   return context.exports;
 }

@@ -1,5 +1,6 @@
-const assert = require('node:assert/strict'), { test } = require('node:test'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
-const sandbox = { exports: {} }; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/taskActivity.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox); const api = sandbox.exports;
+const { runWithTranslations } = require('../test-support/i18n.cjs')
+const assert = require('node:assert/strict'), { test } = require('node:test'), fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
+const sandbox = { exports: {} }; runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/taskActivity.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox); const api = sandbox.exports;
 const raw = { key: 'task:25', id: 25, taskKind: 'BUILD', serviceId: 3, serviceName: '示例服务', serviceType: 'BACKEND', createdBy: 'operator', mine: true, hidden: false, status: 'PENDING', queuePosition: 2, canCancel: true, cancelPath: '/api/builds/25/cancel', detailPath: '/builds/25', currentStepLabel: '等待执行' };
 const snapshot = extra => ({ serverTime: '2026-10-18T01:00:00Z', running: null, pending: [raw], runtimePending: [], pendingCount: 1, pendingRuntimeCount: 0, recentCompletions: [], concurrency: 1, ...extra });
 test('parallel activity lists every running task and keeps permission redaction', () => {

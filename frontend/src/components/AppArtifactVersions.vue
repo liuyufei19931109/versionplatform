@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppArtifactTable from './AppArtifactTable.vue'
 const props = defineProps<{ artifacts: Record<string, unknown>[]; loading: boolean; loaded: boolean; error: string; enabled: boolean; showDelivery: boolean }>()
 const emit = defineEmits<{ retry: []; deliver: [artifact: Record<string, unknown>] }>()
 const route = useRoute(), router = useRouter()
-const environments = [{name:'prod',label:'生产'},{name:'test',label:'预生产'}] as const
+const environments = [{name:'prod',get label() { return tUi('生产') }},{name:'test',get label() { return tUi('预生产') }}] as const
 function requestedEnvironment() { const value=route.query.packageEnvironment; return value==='prod'||value==='test'?value:undefined }
 const active = ref<'prod'|'test'>(requestedEnvironment()||'prod')
 let initialized = false, chosen = Boolean(requestedEnvironment())
@@ -31,16 +33,16 @@ function change(value: unknown) {
         <el-tab-pane v-for="environment in environments" :key="environment.name" :name="environment.name">
           <template #label><span class="app-environment-label">{{environment.label}}<span>{{loaded?grouped[environment.name].length:'—'}}</span></span></template>
           <div v-if="active===environment.name" class="app-environment-content">
-            <div v-if="loading" class="app-packages-loading" role="status">正在读取安装包版本…<el-skeleton :rows="3"/></div>
-            <el-alert v-else-if="error" type="error" :title="error" :closable="false" show-icon><template #default><el-button link type="primary" @click="emit('retry')">重新读取安装包</el-button></template></el-alert>
-            <template v-else-if="loaded"><p class="app-packages-scope">{{environment.name==='prod'?'正式发布使用的生产安装包':'用于上线前验证的预生产安装包'}}，按打包时间倒序。</p><AppArtifactTable :rows="grouped[environment.name]" :enabled="enabled" :show-delivery="showDelivery" :empty-text="'暂无'+environment.label+'安装包'" @deliver="emit('deliver',$event)"/></template>
+            <div v-if="loading" class="app-packages-loading" role="status">{{ tUi('正在读取安装包版本…') }}<el-skeleton :rows="3"/></div>
+            <el-alert v-else-if="error" type="error" :title="error" :closable="false" show-icon><template #default><el-button link type="primary" @click="emit('retry')">{{ tUi('重新读取安装包') }}</el-button></template></el-alert>
+            <template v-else-if="loaded"><p class="app-packages-scope">{{ tUi('{0}，按打包时间倒序。', environment.name==='prod'?tUi('正式发布使用的生产安装包'):tUi('用于上线前验证的预生产安装包')) }}</p><AppArtifactTable :rows="grouped[environment.name]" :enabled="enabled" :show-delivery="showDelivery" :empty-text="tUi('暂无')+environment.label+tUi('安装包')" @deliver="emit('deliver',$event)"/></template>
           </div>
         </el-tab-pane>
       </el-tabs>
-      <el-button class="app-artifacts-refresh" size="small" :loading="loading" :disabled="loading" @click="emit('retry')">刷新列表</el-button>
+      <el-button class="app-artifacts-refresh" size="small" :loading="loading" :disabled="loading" @click="emit('retry')">{{ tUi('刷新列表') }}</el-button>
     </div>
-    <div v-if="!loading&&loaded&&incomplete" class="app-packages-warning" role="status">{{incomplete}} 条安装包详情暂未读取，记录仍保留在列表中。<el-button link type="primary" @click="emit('retry')">重试读取</el-button></div>
-    <el-collapse v-if="!loading&&loaded&&other.length" class="app-other-packages"><el-collapse-item :title="'其他及历史记录（'+other.length+'）'" name="other"><p class="app-packages-scope">开发包和未记录环境的历史安装包保留在此处；未记录构建环境的包需重新构建后交付。</p><AppArtifactTable :rows="other" :enabled="enabled" :show-delivery="showDelivery" show-environment empty-text="暂无其他安装包" @deliver="emit('deliver',$event)"/></el-collapse-item></el-collapse>
+    <div v-if="!loading&&loaded&&incomplete" class="app-packages-warning" role="status">{{ tUi('{0} 条安装包详情暂未读取，记录仍保留在列表中。', incomplete) }}<el-button link type="primary" @click="emit('retry')">{{ tUi('重试读取') }}</el-button></div>
+    <el-collapse v-if="!loading&&loaded&&other.length" class="app-other-packages"><el-collapse-item :title="tUi('其他及历史记录（')+other.length+'）'" name="other"><p class="app-packages-scope">{{ tUi('开发包和未记录环境的历史安装包保留在此处；未记录构建环境的包需重新构建后交付。') }}</p><AppArtifactTable :rows="other" :enabled="enabled" :show-delivery="showDelivery" show-environment :empty-text="tUi('暂无其他安装包')" @deliver="emit('deliver',$event)"/></el-collapse-item></el-collapse>
   </section>
 </template>
 

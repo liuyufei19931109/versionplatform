@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 export type CodeBuildStatus = 'UNKNOWN' | 'PENDING_BUILD' | 'BUILDING' | 'BUILT' | 'BUILD_FAILED'
 export type CodeUpdateStatus = CodeBuildStatus | 'NO_UPDATES' | 'BRANCH_DELETED' | 'SERVICE_CHANGED' | 'SYNC_ERROR'
 export interface CodeEnvironmentUpdate { environmentName: string; status: CodeBuildStatus; buildTaskId?: number; artifactId?: number }
@@ -10,17 +11,17 @@ export interface VersionCodeUpdate {
 export interface VersionCodeUpdates { enabled: boolean; items: VersionCodeUpdate[] }
 
 const labels: Record<CodeUpdateStatus, string> = {
-  UNKNOWN: '尚未核对', NO_UPDATES: '暂无新提交', PENDING_BUILD: '有新提交，待打包', BUILDING: '正在打包', BUILT: '最新提交已打包', BUILD_FAILED: '最新构建失败',
-  BRANCH_DELETED: '分支已删除', SERVICE_CHANGED: '仓库配置已变更', SYNC_ERROR: '代码核对失败',
+  get UNKNOWN() { return tUi('尚未核对') }, get NO_UPDATES() { return tUi('暂无新提交') }, get PENDING_BUILD() { return tUi('有新提交，待打包') }, get BUILDING() { return tUi('正在打包') }, get BUILT() { return tUi('最新提交已打包') }, get BUILD_FAILED() { return tUi('最新构建失败') },
+  get BRANCH_DELETED() { return tUi('分支已删除') }, get SERVICE_CHANGED() { return tUi('仓库配置已变更') }, get SYNC_ERROR() { return tUi('代码核对失败') },
 }
 export function codeStatus(value: unknown): CodeUpdateStatus { return typeof value === 'string' && Object.prototype.hasOwnProperty.call(labels, value) ? value as CodeUpdateStatus : 'UNKNOWN' }
 export function codeStatusLabel(value: unknown) { return labels[codeStatus(value)] }
 export function codeBuildStatus(value: unknown): CodeBuildStatus { return typeof value === 'string' && ['PENDING_BUILD', 'BUILDING', 'BUILT', 'BUILD_FAILED'].includes(value) ? value as CodeBuildStatus : 'UNKNOWN' }
-export function codeBuildStatusLabel(value: unknown) { return codeBuildStatus(value) === 'PENDING_BUILD' ? '尚未打包' : codeStatusLabel(codeBuildStatus(value)) }
+export function codeBuildStatusLabel(value: unknown) { return codeBuildStatus(value) === 'PENDING_BUILD' ? tUi('尚未打包') : codeStatusLabel(codeBuildStatus(value)) }
 export function codeStatusType(value: unknown): 'info' | 'warning' | 'primary' | 'success' | 'danger' {
   return ({ UNKNOWN: 'info', NO_UPDATES: 'info', PENDING_BUILD: 'warning', BUILDING: 'primary', BUILT: 'success', BUILD_FAILED: 'danger', BRANCH_DELETED: 'danger', SERVICE_CHANGED: 'warning', SYNC_ERROR: 'warning' } as const)[codeStatus(value)]
 }
-export function codeEventLabel(value?: string) { return value === 'MERGED' ? '合并更新' : value === 'PUSH' ? '代码提交' : value === 'SYNC' ? '分支同步' : '代码更新' }
+export function codeEventLabel(value?: string) { return value === 'MERGED' ? tUi('合并更新') : value === 'PUSH' ? tUi('代码提交') : value === 'SYNC' ? tUi('分支同步') : tUi('代码更新') }
 export function codeBuildBlocked(value?: VersionCodeUpdate) { return value?.status === 'BRANCH_DELETED' || value?.status === 'SERVICE_CHANGED' }
 
 // Only link to a GitHub PR or commit page. Never navigate to an arbitrary webhook-supplied URL.
@@ -36,7 +37,7 @@ export function githubEventUrl(value?: string): string | undefined {
 }
 
 export function normalizeCodeUpdates(value: unknown): VersionCodeUpdates {
-  if (!value || typeof value !== 'object' || typeof (value as VersionCodeUpdates).enabled !== 'boolean' || !Array.isArray((value as VersionCodeUpdates).items)) throw new Error('代码动态返回格式不完整，请稍后重新读取')
+  if (!value || typeof value !== 'object' || typeof (value as VersionCodeUpdates).enabled !== 'boolean' || !Array.isArray((value as VersionCodeUpdates).items)) throw new Error(tUi('代码动态返回格式不完整，请稍后重新读取'))
   const source = value as VersionCodeUpdates
   if (!source.enabled) return { enabled: false, items: [] }
   const text = (v: unknown, size = 500) => typeof v === 'string' ? v.slice(0, size) : undefined

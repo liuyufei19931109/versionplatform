@@ -1,9 +1,10 @@
+const { runWithTranslations } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 const compiled = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/productionGate.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const context = { exports: {} };
-vm.runInNewContext(compiled, context);
+runWithTranslations(compiled, context);
 const { readinessMap, productionEligible, readinessBadge } = context.exports;
 
 test('only artifacts with a successful pre-production or production deployment are eligible', () => {

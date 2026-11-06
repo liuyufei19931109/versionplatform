@@ -1,5 +1,6 @@
-const assert = require('node:assert/strict'), { test } = require('node:test'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
-const sandbox = { exports: {}, URL }; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/gitEvents.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox); const api = sandbox.exports;
+const { runWithTranslations } = require('../test-support/i18n.cjs')
+const assert = require('node:assert/strict'), { test } = require('node:test'), fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
+const sandbox = { exports: {}, URL }; runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/gitEvents.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, sandbox); const api = sandbox.exports;
 const service = { id: 7, name: '示例服务', serviceKey: 'sample-service', serviceType: 'BACKEND', canBuild: true };
 const item = (id, receivedAt) => ({ id, services: [service], branch: 'demo/fix-sample', commitId: 'a'.repeat(40), receivedAt, unread: true });
 test('received time, then id determine descending latest five, independent of branch naming', () => {

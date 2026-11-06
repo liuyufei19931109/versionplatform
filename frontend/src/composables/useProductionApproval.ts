@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { useAppScope } from './useAppScope'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { http, payload } from '../api'
@@ -7,7 +8,7 @@ interface Approval { approver?: string; enabled?: boolean; serverTime?: string; 
 export function useProductionApproval() {
   const { api } = useAppScope()
   const enabled = ref(false), loading = ref(false), unavailable = ref(false), deadline = ref(0), now = ref(Date.now())
-  const account = ref(''), approver = computed(() => account.value || authUser.value?.username || '当前账号')
+  const account = ref(''), approver = computed(() => account.value || authUser.value?.username || tUi('当前账号'))
   const remaining = computed(() => Math.max(0, Math.ceil((deadline.value - now.value) / 1000)))
   const timer = window.setInterval(() => { now.value = Date.now() }, 500)
   function apply(value: Approval) {

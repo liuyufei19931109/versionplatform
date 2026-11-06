@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Bell, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -17,7 +19,7 @@ const props = defineProps<{ taskId: string; taskStatus?: string; canRetry: boole
 const records = ref<NotificationRecord[]>([]), loading = ref(false), error = ref(''), retrying = ref<number | string | null>(null)
 const terminal = computed(() => ['SUCCESS', 'FAILED'].includes(props.taskStatus || ''))
 const active = computed(() => records.value.some(record => ['PENDING', 'SENDING'].includes(record.status)))
-const labels = { PENDING: '待发送', SENDING: '发送中', SENT: '已发送', FAILED: '发送失败' }
+const labels = { get PENDING() { return tUi('待发送') }, get SENDING() { return tUi('发送中') }, get SENT() { return tUi('已发送') }, get FAILED() { return tUi('发送失败') } }
 const tagTypes = { PENDING: 'info', SENDING: 'primary', SENT: 'success', FAILED: 'danger' } as const
 let timer: number | undefined, disposed = false, fetching = false, reloadRequested = false, remainingPolls = 0, generation = 0
 let completionChecks: number[] = []
@@ -44,7 +46,7 @@ async function load() {
   try {
     const result = await http.get(`/releases/${props.taskId}/notifications`)
     if (!disposed && requestGeneration === generation) { records.value = rows<NotificationRecord>(result); error.value = '' }
-  } catch (value) { if (!disposed && requestGeneration === generation) error.value = errorText(value, '暂时无法读取通知状态') }
+  } catch (value) { if (!disposed && requestGeneration === generation) error.value = errorText(value, tUi('暂时无法读取通知状态')) }
   finally {
     fetching = false; loading.value = false
     // Do not lose a task-id/status change while a request for the old task is in flight.
@@ -56,11 +58,11 @@ function refresh() { remainingPolls = 20; void load() }
 async function retry(record: NotificationRecord) {
   if (retrying.value !== null || !props.canRetry || record.status !== 'FAILED') return
   retrying.value = record.id
-  try { await ElMessageBox.confirm('将重新发送这条发版结果通知到企业微信群，不会重新执行发版。', '重新发送通知', { confirmButtonText: '重新发送', cancelButtonText: '取消', type: 'info' }) }
+  try { await ElMessageBox.confirm(tUi('将重新发送这条发版结果通知到企业微信群，不会重新执行发版。'), tUi('重新发送通知'), { confirmButtonText: tUi('重新发送'), cancelButtonText: tUi('取消'), type: 'info' }) }
   catch { retrying.value = null; return }
   try {
     await http.post(`/releases/${props.taskId}/notifications/${record.id}/retry`)
-    ElMessage.success('通知已重新加入发送队列')
+    ElMessage.success(tUi('通知已重新加入发送队列'))
     remainingPolls = 20
     await load()
   } catch (value) { ElMessage.error(errorText(value)) }
@@ -78,17 +80,17 @@ onBeforeUnmount(() => { disposed = true; clearTimer() })
 
 <template>
   <section class="panel release-notifications">
-    <div class="panel-title"><div class="notification-heading"><el-icon><Bell /></el-icon><h3>群通知</h3><span>企业微信</span></div><el-button link :icon="Refresh" :loading="loading" @click="refresh">刷新状态</el-button></div>
-    <div v-if="error" class="notification-state-error">{{ error }}<small>通知状态读取失败不影响发版结果。</small></div>
-    <div v-else-if="!records.length" class="notification-empty">{{ loading ? '正在读取通知状态…' : terminal ? '尚未生成群通知。已启用且符合通知范围的新发版会自动发送，历史记录不补发。' : '任务完成后，将按配置发送发版结果通知。' }}</div>
+    <div class="panel-title"><div class="notification-heading"><el-icon><Bell /></el-icon><h3>{{ tUi('群通知') }}</h3><span>{{ tUi('企业微信') }}</span></div><el-button link :icon="Refresh" :loading="loading" @click="refresh">{{ tUi('刷新状态') }}</el-button></div>
+    <div v-if="error" class="notification-state-error">{{ error }}<small>{{ tUi('通知状态读取失败不影响发版结果。') }}</small></div>
+    <div v-else-if="!records.length" class="notification-empty">{{ loading ? tUi('正在读取通知状态…') : terminal ? tUi('尚未生成群通知。已启用且符合通知范围的新发版会自动发送，历史记录不补发。') : tUi('任务完成后，将按配置发送发版结果通知。') }}</div>
     <div v-else class="notification-records">
       <div v-for="record in records" :key="record.id" class="notification-record">
-        <div class="notification-result"><el-tag :type="tagTypes[record.status] || 'info'" size="small">{{ labels[record.status] || record.status }}</el-tag><span v-if="record.status === 'SENT'">{{ formatTime(record.sentAt) }}</span><span v-else>创建于 {{ formatTime(record.createdAt) }}</span><small>已尝试 {{ record.attempts || 0 }} 次</small></div>
+        <div class="notification-result"><el-tag :type="tagTypes[record.status] || 'info'" size="small">{{ labels[record.status] || record.status }}</el-tag><span v-if="record.status === 'SENT'">{{ formatTime(record.sentAt) }}</span><span v-else>{{ tUi('创建于 {0}', formatTime(record.createdAt)) }}</span><small>{{ tUi('已尝试 {0} 次', record.attempts || 0) }}</small></div>
         <p v-if="record.lastError && record.status !== 'SENT'" class="notification-error">{{ record.lastError }}</p>
-        <el-button v-if="record.status === 'FAILED' && canRetry" link type="primary" :loading="retrying === record.id" :disabled="retrying !== null && retrying !== record.id" @click="retry(record)">重新发送通知</el-button>
+        <el-button v-if="record.status === 'FAILED' && canRetry" link type="primary" :loading="retrying === record.id" :disabled="retrying !== null && retrying !== record.id" @click="retry(record)">{{ tUi('重新发送通知') }}</el-button>
       </div>
     </div>
-    <p class="notification-note">通知独立发送，发送失败不会改变发版结果。</p>
+    <p class="notification-note">{{ tUi('通知独立发送，发送失败不会改变发版结果。') }}</p>
   </section>
 </template>
 

@@ -1,9 +1,10 @@
+const { runWithTranslations } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 const compiled = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/taskFailure.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const context = { exports: {}, require: name => { assert.equal(name, './api'); return { stepLabel: code => code }; } };
-vm.runInNewContext(compiled, context);
+runWithTranslations(compiled, context);
 const guide = context.exports.taskFailureGuide;
 test('baseline rejection guides new immutable commit rather than retrying old one', () => {
   const result = guide({ id: 1, errorMessage: '当前分支未包含 master 最新提交' });

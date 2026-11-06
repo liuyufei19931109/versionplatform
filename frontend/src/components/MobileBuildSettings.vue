@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { errorText, http, payload } from '../api'
@@ -13,7 +15,7 @@ function newDrafts() {
   return { dartDefines: { key: '', value: '', error: '' }, environmentVariables: { key: '', value: '', error: '' } }
 }
 const drafts = reactive({ dev: newDrafts(), test: newDrafts(), prod: newDrafts() })
-const groupLabels = { dartDefines: 'Dart 编译参数', environmentVariables: '构建环境变量' }
+const groupLabels = { get dartDefines() { return tUi('Dart 编译参数') }, get environmentVariables() { return tUi('构建环境变量') } }
 watch(() => props.model, model => {
   model.environments ||= {}
   for (const env of mobileEnvironments) {
@@ -29,7 +31,7 @@ const selectedSigning = computed(() => profiles.value.find(item => item.name ===
 async function loadProfiles() {
   profileLoading.value = true; profileError.value = ''
   try { const result = payload<{ configured: boolean; profiles: MobileSigningProfile[] }>(await http.get('/apps/signing-profiles'), { configured: false, profiles: [] }); profiles.value = result.profiles || []; registryConfigured.value = result.configured }
-  catch (error) { profileError.value = errorText(error, '无法读取构建机签名配置') }
+  catch (error) { profileError.value = errorText(error, tUi('无法读取构建机签名配置')) }
   finally { profileLoading.value = false }
 }
 function chooseSigning(name: string) { const selected = profiles.value.find(item => item.name === name); profile.value.expectedCertificateSha256 = selected?.certificateSha256 || '' }
@@ -37,12 +39,12 @@ function copyLegacy() {
   const keys = ['applicationId', 'expectedCertificateSha256', 'signingProfile', 'flavor', 'target', 'versionName', 'versionCode', 'apkPath', 'aabPath'] as const
   for (const key of keys) if (props.model[key] !== undefined) Object.assign(profile.value, { [key]: props.model[key] })
   profile.value.enabled = false
-  ElMessage.success('旧配置已复制到当前环境，核对签名、构建模式和参数后再启用')
+  ElMessage.success(tUi('旧配置已复制到当前环境，核对签名、构建模式和参数后再启用'))
 }
 function draftError(env: MobileEnvironmentName, group: MobileParameterGroup) {
   const draft = drafts[env][group], key = draft.key.trim(), entries = props.model.environments![env]![group]
-  if (Object.prototype.hasOwnProperty.call(entries, key)) return '该名称已存在，请修改列表中的值'
-  if (Object.keys(entries).length >= 40) return '每组最多添加 40 个参数'
+  if (Object.prototype.hasOwnProperty.call(entries, key)) return tUi('该名称已存在，请修改列表中的值')
+  if (Object.keys(entries).length >= 40) return tUi('每组最多添加 40 个参数')
   return mobileParameterError(group, key, draft.value)
 }
 function storeDraft(env: MobileEnvironmentName, group: MobileParameterGroup) {
@@ -74,51 +76,51 @@ onMounted(loadProfiles)
 
 <template>
   <div class="mobile-build-settings">
-    <div class="shared-heading"><h4>共用构建工具</h4><span>各环境使用同一份代码和工具版本</span></div>
-    <el-form-item label="安装包格式" required><el-radio-group v-model="model.outputFormat"><el-radio-button value="APK">完整 APK</el-radio-button><el-radio-button value="AAB">AAB</el-radio-button></el-radio-group><small>{{mobileFormat(model)==='APK'?'用于内部安装和升级，生成一个完整 APK。预生产 Debug 构建请选择此项。':'用于应用商店处理和分发，仅支持 Release 构建。'}}</small></el-form-item>
-    <div class="mobile-build-fields"><el-form-item label="Flutter 固定版本" required><el-input v-model="model.flutterVersion" placeholder="例如 3.35.7"/><small>填写项目使用的完整版本号，例如 3.47.3。</small></el-form-item><el-form-item label="App 构建超时（秒）"><el-input-number v-model="model.buildTimeoutSeconds" :min="60" :max="7200" :step="60" :precision="0"/></el-form-item></div>
-    <el-form-item label="默认 Dart 入口文件"><el-input v-model="model.target" placeholder="lib/main.dart"/></el-form-item>
-    <el-form-item label="App 版本管理"><el-radio-group v-model="versionPolicy" aria-label="App 版本策略" :disabled="!authUser?.admin"><el-radio-button value="AUTO">自动管理</el-radio-button><el-radio-button value="MANUAL">手动配置</el-radio-button></el-radio-group><small>{{authUser?.admin?'仅影响此 App 后续新建的构建，历史安装包和任务保留原版本。':'当前策略由管理员设置；你仍可按现有策略构建 App。'}}</small></el-form-item>
-    <div v-if="automaticMobileVersion(model)" class="version-policy-guide"><b>按环境自动编号，生产使用已验证的 PRE 代码</b><p>PRE：0.1.0-pre → 0.1.1-pre → … → 0.1.9-pre → 0.2.0-pre。</p><p>生产版本独立从 0.0.1 开始递增，不加后缀；选择成功的 PRE 版本后，锁定其分支和 Commit 构建。</p><small>版本在加入队列时由平台分配；失败或取消不回收已分配的编号。内部 Android versionCode 自动递增，用于覆盖升级校验。</small></div>
-    <el-alert title="构建机准备" description="构建机需要安装匹配的 Flutter、Android SDK 和签名资料。此处只引用已准备的签名，不上传密钥或密码。" type="info" :closable="false" show-icon/>
+    <div class="shared-heading"><h4>{{ tUi('共用构建工具') }}</h4><span>{{ tUi('各环境使用同一份代码和工具版本') }}</span></div>
+    <el-form-item :label="tUi('安装包格式')" required><el-radio-group v-model="model.outputFormat"><el-radio-button value="APK">{{ tUi('完整 APK') }}</el-radio-button><el-radio-button value="AAB">AAB</el-radio-button></el-radio-group><small>{{mobileFormat(model)==='APK'?tUi('用于内部安装和升级，生成一个完整 APK。预生产 Debug 构建请选择此项。'):tUi('用于应用商店处理和分发，仅支持 Release 构建。')}}</small></el-form-item>
+    <div class="mobile-build-fields"><el-form-item :label="tUi('Flutter 固定版本')" required><el-input v-model="model.flutterVersion" :placeholder="tUi('例如 3.35.7')"/><small>{{ tUi('填写项目使用的完整版本号，例如 3.47.3。') }}</small></el-form-item><el-form-item :label="tUi('App 构建超时（秒）')"><el-input-number v-model="model.buildTimeoutSeconds" :min="60" :max="7200" :step="60" :precision="0"/></el-form-item></div>
+    <el-form-item :label="tUi('默认 Dart 入口文件')"><el-input v-model="model.target" placeholder="lib/main.dart"/></el-form-item>
+    <el-form-item :label="tUi('App 版本管理')"><el-radio-group v-model="versionPolicy" :aria-label="tUi('App 版本策略')" :disabled="!authUser?.admin"><el-radio-button value="AUTO">{{ tUi('自动管理') }}</el-radio-button><el-radio-button value="MANUAL">{{ tUi('手动配置') }}</el-radio-button></el-radio-group><small>{{authUser?.admin?tUi('仅影响此 App 后续新建的构建，历史安装包和任务保留原版本。'):tUi('当前策略由管理员设置；你仍可按现有策略构建 App。')}}</small></el-form-item>
+    <div v-if="automaticMobileVersion(model)" class="version-policy-guide"><b>{{ tUi('按环境自动编号，生产使用已验证的 PRE 代码') }}</b><p>PRE：0.1.0-pre → 0.1.1-pre → … → 0.1.9-pre → 0.2.0-pre。</p><p>{{ tUi('生产版本独立从 0.0.1 开始递增，不加后缀；选择成功的 PRE 版本后，锁定其分支和 Commit 构建。') }}</p><small>{{ tUi('版本在加入队列时由平台分配；失败或取消不回收已分配的编号。内部 Android versionCode 自动递增，用于覆盖升级校验。') }}</small></div>
+    <el-alert :title="tUi('构建机准备')" :description="tUi('构建机需要安装匹配的 Flutter、Android SDK 和签名资料。此处只引用已准备的签名，不上传密钥或密码。')" type="info" :closable="false" show-icon/>
 
-    <div class="environment-heading"><h4>按环境配置安装包</h4><p>先确定环境，再绑定包名、签名与可选构建参数。构建后的安装包只能发布到同一环境。</p></div>
-    <el-tabs v-model="active" type="card" class="mobile-env-tabs" aria-label="App 构建环境配置">
-      <el-tab-pane v-for="env in mobileEnvironments" :key="env.name" :name="env.name"><template #label><span>{{env.label}}环境 <i class="env-indicator" :class="{'is-enabled':model.environments?.[env.name]?.enabled}"/></span></template></el-tab-pane>
+    <div class="environment-heading"><h4>{{ tUi('按环境配置安装包') }}</h4><p>{{ tUi('先确定环境，再绑定包名、签名与可选构建参数。构建后的安装包只能发布到同一环境。') }}</p></div>
+    <el-tabs v-model="active" type="card" class="mobile-env-tabs" :aria-label="tUi('App 构建环境配置')">
+      <el-tab-pane v-for="env in mobileEnvironments" :key="env.name" :name="env.name"><template #label><span>{{ tUi('{0}环境', env.label) }}<i class="env-indicator" :class="{'is-enabled':model.environments?.[env.name]?.enabled}"/></span></template></el-tab-pane>
     </el-tabs>
-    <section class="mobile-env-config" :class="{'is-production':active==='prod'}" :aria-label="environmentLabel(active)+'构建配置'">
-      <div class="env-config-title"><div><h4>{{environmentLabel(active)}}安装包</h4><p>{{active==='prod'?'生产安装包使用 Release 模式和正式签名。':'可以沿用已安装测试包的原签名，保持覆盖升级兼容。'}}</p></div><el-switch v-model="profile.enabled" :active-text="'启用'+environmentLabel(active)+'构建'"/></div>
-      <div v-if="legacy" class="legacy-config"><details><summary>查看旧的全局配置</summary><dl><dt>包名</dt><dd>{{model.applicationId || '未填写'}}</dd><dt>签名名称</dt><dd>{{model.signingProfile || '未填写'}}</dd><dt>证书指纹</dt><dd>{{model.expectedCertificateSha256 || '未填写'}}</dd></dl></details><p>旧值已保留，不会自动用于任何环境。复制后仍需核对并启用。</p><el-button size="small" @click="copyLegacy">复制旧配置到{{environmentLabel(active)}}</el-button></div>
-      <div class="mobile-build-fields"><el-form-item label="Android applicationId" required><el-input v-model="profile.applicationId" placeholder="com.example.app"/><small>预生产建议使用独立的 .pre 包名，避免覆盖正式 App。</small></el-form-item><el-form-item label="构建模式" required><el-radio-group v-model="profile.buildMode"><el-radio-button value="DEBUG" :disabled="active==='prod'||mobileFormat(model)==='AAB'">Debug</el-radio-button><el-radio-button value="RELEASE">Release</el-radio-button></el-radio-group><small>{{active==='prod'?'生产固定使用 Release。':'Debug 与签名是两项独立配置，仍需指定固定证书。'}}</small></el-form-item></div>
-      <el-form-item label="服务端签名配置" required>
-        <div class="signing-picker"><el-select v-model="profile.signingProfile" :loading="profileLoading" filterable clearable placeholder="选择构建机上已登记的签名" @change="chooseSigning"><el-option v-if="profile.signingProfile&&!selectedSigning" :value="profile.signingProfile" :label="profile.signingProfile+'（构建机未找到）'" disabled/><el-option v-for="item in profiles" :key="item.name" :value="item.name" :label="item.name+(item.debugCertificate?' · 测试证书':' · 正式证书')" :disabled="!item.ready||((active==='prod'||profile.buildMode==='RELEASE')&&item.debugCertificate)"/></el-select><el-button :loading="profileLoading" @click="loadProfiles">刷新签名</el-button></div>
-        <small v-if="profileError" class="field-error">{{profileError}}。已有配置保留，可刷新重试。</small><small v-else-if="!profileLoading && (!registryConfigured||!profiles.length)">还没有可用签名。请管理员在构建机登记 PRE 原签名和生产正式签名，再点击“刷新签名”。未完成时可关闭环境并保存草稿。</small><small v-else-if="selectedSigning&&!selectedSigning.ready" class="field-error">{{selectedSigning.message || '该签名尚未准备完成'}}</small>
+    <section class="mobile-env-config" :class="{'is-production':active==='prod'}" :aria-label="environmentLabel(active)+tUi('构建配置')">
+      <div class="env-config-title"><div><h4>{{ tUi('{0}安装包', environmentLabel(active)) }}</h4><p>{{active==='prod'?tUi('生产安装包使用 Release 模式和正式签名。'):tUi('可以沿用已安装测试包的原签名，保持覆盖升级兼容。')}}</p></div><el-switch v-model="profile.enabled" :active-text="tUi('启用')+environmentLabel(active)+tUi('构建')"/></div>
+      <div v-if="legacy" class="legacy-config"><details><summary>{{ tUi('查看旧的全局配置') }}</summary><dl><dt>{{ tUi('包名') }}</dt><dd>{{model.applicationId || tUi('未填写')}}</dd><dt>{{ tUi('签名名称') }}</dt><dd>{{model.signingProfile || tUi('未填写')}}</dd><dt>{{ tUi('证书指纹') }}</dt><dd>{{model.expectedCertificateSha256 || tUi('未填写')}}</dd></dl></details><p>{{ tUi('旧值已保留，不会自动用于任何环境。复制后仍需核对并启用。') }}</p><el-button size="small" @click="copyLegacy">{{ tUi('复制旧配置到{0}', environmentLabel(active)) }}</el-button></div>
+      <div class="mobile-build-fields"><el-form-item label="Android applicationId" required><el-input v-model="profile.applicationId" placeholder="com.example.app"/><small>{{ tUi('预生产建议使用独立的 .pre 包名，避免覆盖正式 App。') }}</small></el-form-item><el-form-item :label="tUi('构建模式')" required><el-radio-group v-model="profile.buildMode"><el-radio-button value="DEBUG" :disabled="active==='prod'||mobileFormat(model)==='AAB'">Debug</el-radio-button><el-radio-button value="RELEASE">Release</el-radio-button></el-radio-group><small>{{active==='prod'?tUi('生产固定使用 Release。'):tUi('Debug 与签名是两项独立配置，仍需指定固定证书。')}}</small></el-form-item></div>
+      <el-form-item :label="tUi('服务端签名配置')" required>
+        <div class="signing-picker"><el-select v-model="profile.signingProfile" :loading="profileLoading" filterable clearable :placeholder="tUi('选择构建机上已登记的签名')" @change="chooseSigning"><el-option v-if="profile.signingProfile&&!selectedSigning" :value="profile.signingProfile" :label="profile.signingProfile+tUi('（构建机未找到）')" disabled/><el-option v-for="item in profiles" :key="item.name" :value="item.name" :label="item.name+(item.debugCertificate?tUi(' · 测试证书'):tUi(' · 正式证书'))" :disabled="!item.ready||((active==='prod'||profile.buildMode==='RELEASE')&&item.debugCertificate)"/></el-select><el-button :loading="profileLoading" @click="loadProfiles">{{ tUi('刷新签名') }}</el-button></div>
+        <small v-if="profileError" class="field-error">{{ tUi('{0}。已有配置保留，可刷新重试。', profileError) }}</small><small v-else-if="!profileLoading && (!registryConfigured||!profiles.length)">{{ tUi('还没有可用签名。请管理员在构建机登记 PRE 原签名和生产正式签名，再点击“刷新签名”。未完成时可关闭环境并保存草稿。') }}</small><small v-else-if="selectedSigning&&!selectedSigning.ready" class="field-error">{{selectedSigning.message || tUi('该签名尚未准备完成')}}</small>
       </el-form-item>
-      <el-form-item :label="mobileFormat(model)==='APK'?'应用签名证书 SHA-256 指纹':'上传签名证书 SHA-256 指纹'" required><el-input v-model="profile.expectedCertificateSha256" readonly placeholder="选择签名后自动读取证书指纹"/><small>从构建机证书读取。覆盖升级时必须与已安装版本的签名一致。</small></el-form-item>
-      <el-form-item v-if="active!=='prod'&&profile.buildMode==='DEBUG'"><el-checkbox v-model="profile.allowDebugSigning">允许当前环境进行 Debug 构建并使用已登记的测试证书</el-checkbox><small>仍需匹配指定证书指纹；切换为 Release 后自动关闭此许可。</small></el-form-item>
-      <el-alert v-if="selectedSigning?.debugCertificate && profile.buildMode==='RELEASE'" title="Release 构建不允许 Debug 测试证书，请改选正式签名或在非生产环境使用 Debug 构建。" type="warning" :closable="false" show-icon/>
-      <el-alert v-else-if="selectedSigning?.debugCertificate && !profile.allowDebugSigning" title="当前选择的是 Debug 测试证书，请明确勾选允许后再构建。" type="warning" :closable="false" show-icon/>
+      <el-form-item :label="mobileFormat(model)==='APK'?tUi('应用签名证书 SHA-256 指纹'):tUi('上传签名证书 SHA-256 指纹')" required><el-input v-model="profile.expectedCertificateSha256" readonly :placeholder="tUi('选择签名后自动读取证书指纹')"/><small>{{ tUi('从构建机证书读取。覆盖升级时必须与已安装版本的签名一致。') }}</small></el-form-item>
+      <el-form-item v-if="active!=='prod'&&profile.buildMode==='DEBUG'"><el-checkbox v-model="profile.allowDebugSigning">{{ tUi('允许当前环境进行 Debug 构建并使用已登记的测试证书') }}</el-checkbox><small>{{ tUi('仍需匹配指定证书指纹；切换为 Release 后自动关闭此许可。') }}</small></el-form-item>
+      <el-alert v-if="selectedSigning?.debugCertificate && profile.buildMode==='RELEASE'" :title="tUi('Release 构建不允许 Debug 测试证书，请改选正式签名或在非生产环境使用 Debug 构建。')" type="warning" :closable="false" show-icon/>
+      <el-alert v-else-if="selectedSigning?.debugCertificate && !profile.allowDebugSigning" :title="tUi('当前选择的是 Debug 测试证书，请明确勾选允许后再构建。')" type="warning" :closable="false" show-icon/>
       <section v-for="group in mobileParameterGroups" :key="group" class="build-parameters" :aria-label="groupLabels[group]">
-        <div class="parameters-heading"><div><h4>{{groupLabels[group]}}</h4><p>{{group === 'dartDefines' ? '通过 --dart-define 传给应用，请使用项目声明的名称。' : '仅传给构建进程。名称以 APP_BUILD_ 开头，不要填写凭据。'}}</p></div><span>{{Object.keys(profile[group]).length}} / 40 项</span></div>
+        <div class="parameters-heading"><div><h4>{{groupLabels[group]}}</h4><p>{{group === 'dartDefines' ? tUi('通过 --dart-define 传给应用，请使用项目声明的名称。') : tUi('仅传给构建进程。名称以 APP_BUILD_ 开头，不要填写凭据。')}}</p></div><span>{{ tUi('{0} / 40 项', Object.keys(profile[group]).length) }}</span></div>
         <div v-for="(_, key) in profile[group]" :key="key" class="parameter-row">
           <code class="parameter-name">{{key}}</code>
-          <div class="parameter-value"><el-input v-model="profile[group][key]" :aria-label="key + ' 参数值'" :maxlength="2048"/><small v-if="mobileParameterError(group,key,profile[group][key])" class="field-error">{{mobileParameterError(group,key,profile[group][key])}}</small></div>
-          <el-button link type="danger" :aria-label="'移除 ' + key" @click="delete profile[group][key]">移除</el-button>
+          <div class="parameter-value"><el-input v-model="profile[group][key]" :aria-label="key + tUi(' 参数值')" :maxlength="2048"/><small v-if="mobileParameterError(group,key,profile[group][key])" class="field-error">{{mobileParameterError(group,key,profile[group][key])}}</small></div>
+          <el-button link type="danger" :aria-label="tUi('移除 ') + key" @click="delete profile[group][key]">{{ tUi('移除') }}</el-button>
         </div>
         <div class="parameter-add-row">
-          <el-input v-model="drafts[active][group].key" :aria-label="groupLabels[group] + '名称'" :maxlength="80" :placeholder="group === 'dartDefines' ? '例如 FEATURE_ENABLED' : '例如 APP_BUILD_MODE'" @input="drafts[active][group].error=''"/>
-          <el-input v-model="drafts[active][group].value" :aria-label="groupLabels[group] + '值'" :maxlength="2048" placeholder="参数值（可为空）" @input="drafts[active][group].error=''" @keydown.enter.prevent="addParameter(group)"/>
-          <el-button type="primary" plain @click="addParameter(group)">添加</el-button>
+          <el-input v-model="drafts[active][group].key" :aria-label="groupLabels[group] + tUi('名称')" :maxlength="80" :placeholder="group === 'dartDefines' ? tUi('例如 FEATURE_ENABLED') : tUi('例如 APP_BUILD_MODE')" @input="drafts[active][group].error=''"/>
+          <el-input v-model="drafts[active][group].value" :aria-label="groupLabels[group] + tUi('值')" :maxlength="2048" :placeholder="tUi('参数值（可为空）')" @input="drafts[active][group].error=''" @keydown.enter.prevent="addParameter(group)"/>
+          <el-button type="primary" plain @click="addParameter(group)">{{ tUi('添加') }}</el-button>
         </div>
         <p v-if="drafts[active][group].error" class="parameter-error" role="alert">{{drafts[active][group].error}}</p>
       </section>
-      <details v-if="!compact" class="mobile-advanced"><summary>版本、Flavor 与高级构建参数</summary>
-        <div class="mobile-build-fields"><el-form-item label="Flavor（选填）"><el-input v-model="profile.flavor" placeholder="项目未配置 Flavor 时留空"/></el-form-item><el-form-item label="当前环境 Dart 入口（选填）"><el-input v-model="profile.target" :placeholder="model.target||'lib/main.dart'"/></el-form-item></div>
-        <div v-if="!automaticMobileVersion(model)" class="mobile-build-fields"><el-form-item label="版本名称（选填）"><el-input v-model="profile.versionName" placeholder="留空使用 pubspec.yaml"/></el-form-item><el-form-item label="内部 versionCode（选填）"><el-input-number v-model="profile.versionCode" :min="1" :max="2100000000" :precision="0" placeholder="使用项目配置"/><small>Android 覆盖升级使用的整数，需大于已分发版本。</small></el-form-item></div><p v-else class="field-help">当前为自动版本管理，构建时由平台分配版本。已有手动配置会保留，内部升级序号会参考历史记录与已登记基线继续递增。</p>
-        <el-form-item v-if="mobileFormat(model)==='APK'" label="APK 输出路径（选填）"><el-input v-model="profile.apkPath" :placeholder="profile.buildMode==='DEBUG'?'build/app/outputs/flutter-apk/app-debug.apk':'build/app/outputs/flutter-apk/app-release.apk'"/><small>留空按构建模式和 Flavor 自动定位完整 APK。</small></el-form-item><el-form-item v-else label="AAB 输出路径（选填）"><el-input v-model="profile.aabPath" placeholder="build/app/outputs/bundle/release/app-release.aab"/></el-form-item>
+      <details v-if="!compact" class="mobile-advanced"><summary>{{ tUi('版本、Flavor 与高级构建参数') }}</summary>
+        <div class="mobile-build-fields"><el-form-item :label="tUi('Flavor（选填）')"><el-input v-model="profile.flavor" :placeholder="tUi('项目未配置 Flavor 时留空')"/></el-form-item><el-form-item :label="tUi('当前环境 Dart 入口（选填）')"><el-input v-model="profile.target" :placeholder="model.target||'lib/main.dart'"/></el-form-item></div>
+        <div v-if="!automaticMobileVersion(model)" class="mobile-build-fields"><el-form-item :label="tUi('版本名称（选填）')"><el-input v-model="profile.versionName" :placeholder="tUi('留空使用 pubspec.yaml')"/></el-form-item><el-form-item :label="tUi('内部 versionCode（选填）')"><el-input-number v-model="profile.versionCode" :min="1" :max="2100000000" :precision="0" :placeholder="tUi('使用项目配置')"/><small>{{ tUi('Android 覆盖升级使用的整数，需大于已分发版本。') }}</small></el-form-item></div><p v-else class="field-help">{{ tUi('当前为自动版本管理，构建时由平台分配版本。已有手动配置会保留，内部升级序号会参考历史记录与已登记基线继续递增。') }}</p>
+        <el-form-item v-if="mobileFormat(model)==='APK'" :label="tUi('APK 输出路径（选填）')"><el-input v-model="profile.apkPath" :placeholder="profile.buildMode==='DEBUG'?'build/app/outputs/flutter-apk/app-debug.apk':'build/app/outputs/flutter-apk/app-release.apk'"/><small>{{ tUi('留空按构建模式和 Flavor 自动定位完整 APK。') }}</small></el-form-item><el-form-item v-else :label="tUi('AAB 输出路径（选填）')"><el-input v-model="profile.aabPath" placeholder="build/app/outputs/bundle/release/app-release.aab"/></el-form-item>
       </details>
       <el-alert v-if="validation" class="environment-validation" :title="validation" type="warning" :closable="false" show-icon/>
-      <p class="environment-saving-note">{{profile.enabled?'保存后仅影响此环境的新构建，历史安装包和发布记录保持原样。':'此环境尚未启用，可以保存未完成的配置，暂不会出现在构建环境选项中。'}}</p>
+      <p class="environment-saving-note">{{profile.enabled?tUi('保存后仅影响此环境的新构建，历史安装包和发布记录保持原样。'):tUi('此环境尚未启用，可以保存未完成的配置，暂不会出现在构建环境选项中。')}}</p>
     </section>
   </div>
 </template>

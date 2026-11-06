@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Bell, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -15,7 +17,7 @@ interface WecomSettings {
 }
 const form = reactive<WecomSettings>({ enabled: false, webhookConfigured: false, groupName: '', publicBaseUrl: '', environments: ['test', 'prod'], notifySuccess: true, notifyFailure: true })
 const webhook = ref(''), loading = ref(false), saving = ref(false), testing = ref(false), loadError = ref(''), savedValue = ref('')
-const environmentOptions = [{ value: 'dev', label: '开发/测试' }, { value: 'test', label: '预生产' }, { value: 'prod', label: '生产' }]
+const environmentOptions = [{ value: 'dev', get label() { return tUi('开发/测试') } }, { value: 'test', get label() { return tUi('预生产') } }, { value: 'prod', get label() { return tUi('生产') } }]
 function settingsBody() {
   return { enabled: form.enabled, groupName: form.groupName.trim(), publicBaseUrl: form.publicBaseUrl.trim(), environments: [...form.environments].sort(), notifySuccess: form.notifySuccess, notifyFailure: form.notifyFailure }
 }
@@ -30,20 +32,20 @@ async function load() {
   if (loading.value) return
   loading.value = true
   try { accept(payload<WecomSettings>(await http.get('/settings/notifications/wecom'), form)); loadError.value = '' }
-  catch (error) { loadError.value = errorText(error, '暂时无法读取群通知配置') }
+  catch (error) { loadError.value = errorText(error, tUi('暂时无法读取群通知配置')) }
   finally { loading.value = false }
 }
 async function save() {
   if (saving.value || loading.value) return
-  if (form.enabled && !form.webhookConfigured && !webhook.value.trim()) return ElMessage.warning('请填写群机器人的 Webhook 地址')
-  if (form.enabled && !form.environments.length) return ElMessage.warning('请至少选择一个通知环境')
-  if (form.enabled && !form.notifySuccess && !form.notifyFailure) return ElMessage.warning('请至少选择一种发版结果')
+  if (form.enabled && !form.webhookConfigured && !webhook.value.trim()) return ElMessage.warning(tUi('请填写群机器人的 Webhook 地址'))
+  if (form.enabled && !form.environments.length) return ElMessage.warning(tUi('请至少选择一个通知环境'))
+  if (form.enabled && !form.notifySuccess && !form.notifyFailure) return ElMessage.warning(tUi('请至少选择一种发版结果'))
   saving.value = true
   try {
     const body = { ...settingsBody(), ...(webhook.value.trim() ? { webhook: webhook.value.trim() } : {}) }
     accept(payload<WecomSettings>(await http.put('/settings/notifications/wecom', body), form))
     loadError.value = ''
-    ElMessage.success('发版通知配置已保存')
+    ElMessage.success(tUi('发版通知配置已保存'))
   } catch (error) { ElMessage.error(errorText(error)) }
   finally { saving.value = false }
 }
@@ -51,9 +53,9 @@ async function sendTest() {
   if (testing.value || saving.value || dirty.value || !form.enabled || !form.webhookConfigured) return
   testing.value = true
   try {
-    await ElMessageBox.confirm(`将向「${form.groupName || '已配置的企业微信群'}」发送一条测试通知，不会触发发版。`, '发送测试通知', { confirmButtonText: '发送到群', cancelButtonText: '取消', type: 'info' })
+    await ElMessageBox.confirm(tUi('将向「{0}」发送一条测试通知，不会触发发版。', form.groupName || tUi('已配置的企业微信群')), tUi('发送测试通知'), { confirmButtonText: tUi('发送到群'), cancelButtonText: tUi('取消'), type: 'info' })
   } catch { testing.value = false; return }
-  try { await http.post('/settings/notifications/wecom/test'); ElMessage.success('测试通知已加入发送队列，请稍后查看企业微信群') }
+  try { await http.post('/settings/notifications/wecom/test'); ElMessage.success(tUi('测试通知已加入发送队列，请稍后查看企业微信群')) }
   catch (error) { ElMessage.error(errorText(error)) }
   finally { testing.value = false }
 }
@@ -63,20 +65,20 @@ onMounted(load)
 <template>
   <section class="panel notification-settings" v-loading="loading">
     <div class="panel-title">
-      <div class="notification-title"><span class="notification-symbol"><el-icon><Bell /></el-icon></span><div><h3>发版通知 · 企业微信</h3><p>所选环境的所有服务共用一个群，在发版结束后发送最终结果。</p></div></div>
-      <el-tag :type="form.enabled && form.webhookConfigured ? 'success' : 'info'">{{ form.enabled && form.webhookConfigured ? '已启用' : '未启用' }}</el-tag>
+      <div class="notification-title"><span class="notification-symbol"><el-icon><Bell /></el-icon></span><div><h3>{{ tUi('发版通知 · 企业微信') }}</h3><p>{{ tUi('所选环境的所有服务共用一个群，在发版结束后发送最终结果。') }}</p></div></div>
+      <el-tag :type="form.enabled && form.webhookConfigured ? 'success' : 'info'">{{ form.enabled && form.webhookConfigured ? tUi('已启用') : tUi('未启用') }}</el-tag>
     </div>
-    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" show-icon class="notification-load-error"><template #default><el-button link type="primary" :icon="Refresh" @click="load">重新读取</el-button></template></el-alert>
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" show-icon class="notification-load-error"><template #default><el-button link type="primary" :icon="Refresh" @click="load">{{ tUi('重新读取') }}</el-button></template></el-alert>
     <el-form v-else label-position="top" :disabled="saving || testing">
-      <div class="notification-enable"><el-switch v-model="form.enabled" active-text="开启发版结果通知" /><span>通知发送失败不会改变发版结果。</span></div>
+      <div class="notification-enable"><el-switch v-model="form.enabled" :active-text="tUi('开启发版结果通知')" /><span>{{ tUi('通知发送失败不会改变发版结果。') }}</span></div>
       <div class="notification-fields">
-        <el-form-item label="群名称"><el-input v-model="form.groupName" maxlength="80" placeholder="例如：发版通知群" /></el-form-item>
-        <el-form-item label="平台访问地址"><el-input v-model="form.publicBaseUrl" placeholder="例如：https://release.example.com" /><div class="notification-help">群消息中的“查看发版详情”将跳转到此地址。</div></el-form-item>
-        <el-form-item class="notification-webhook" :label="form.webhookConfigured ? '更新 Webhook（留空保留现有地址）' : '机器人 Webhook 地址'"><el-input v-model="webhook" type="password" autocomplete="new-password" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" /><div class="notification-help"><span v-if="form.webhookConfigured" class="configured-dot">已安全保存</span>地址包含密钥，保存后不再显示。</div></el-form-item>
-        <el-form-item label="通知环境"><el-checkbox-group v-model="form.environments"><el-checkbox v-for="environment in environmentOptions" :key="environment.value" :value="environment.value">{{ environment.label }}</el-checkbox></el-checkbox-group><div class="notification-help">🔴 生产　🟢 预生产　⚪ 开发/测试；只发送勾选环境的新发布结果。</div></el-form-item>
-        <el-form-item label="通知结果"><div><el-checkbox v-model="form.notifySuccess">发版成功</el-checkbox><el-checkbox v-model="form.notifyFailure">发版失败</el-checkbox></div></el-form-item>
+        <el-form-item :label="tUi('群名称')"><el-input v-model="form.groupName" maxlength="80" :placeholder="tUi('例如：发版通知群')" /></el-form-item>
+        <el-form-item :label="tUi('平台访问地址')"><el-input v-model="form.publicBaseUrl" :placeholder="tUi('例如：https://release.example.com')" /><div class="notification-help">{{ tUi('群消息中的“查看发版详情”将跳转到此地址。') }}</div></el-form-item>
+        <el-form-item class="notification-webhook" :label="form.webhookConfigured ? tUi('更新 Webhook（留空保留现有地址）') : tUi('机器人 Webhook 地址')"><el-input v-model="webhook" type="password" autocomplete="new-password" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" /><div class="notification-help"><span v-if="form.webhookConfigured" class="configured-dot">{{ tUi('已安全保存') }}</span>{{ tUi('地址包含密钥，保存后不再显示。') }}</div></el-form-item>
+        <el-form-item :label="tUi('通知环境')"><el-checkbox-group v-model="form.environments"><el-checkbox v-for="environment in environmentOptions" :key="environment.value" :value="environment.value">{{ environment.label }}</el-checkbox></el-checkbox-group><div class="notification-help">{{ tUi('🔴 生产　🟢 预生产　⚪ 开发/测试；只发送勾选环境的新发布结果。') }}</div></el-form-item>
+        <el-form-item :label="tUi('通知结果')"><div><el-checkbox v-model="form.notifySuccess">{{ tUi('发版成功') }}</el-checkbox><el-checkbox v-model="form.notifyFailure">{{ tUi('发版失败') }}</el-checkbox></div></el-form-item>
       </div>
-      <div class="notification-footer"><p>仅通知新完成的发版任务，不补发历史记录；打包和服务重启不发送。</p><div class="notification-actions"><el-tooltip :content="!form.enabled ? '先启用并保存通知配置' : !form.webhookConfigured ? '先配置并保存群机器人的 Webhook' : '先保存配置，再发送到已配置的企业微信群'" :disabled="!dirty && form.enabled && form.webhookConfigured"><span><el-button :loading="testing" :disabled="dirty || !form.enabled || !form.webhookConfigured || saving" @click="sendTest">发送测试通知</el-button></span></el-tooltip><el-button type="primary" :loading="saving" @click="save">保存通知配置</el-button></div></div>
+      <div class="notification-footer"><p>{{ tUi('仅通知新完成的发版任务，不补发历史记录；打包和服务重启不发送。') }}</p><div class="notification-actions"><el-tooltip :content="!form.enabled ? tUi('先启用并保存通知配置') : !form.webhookConfigured ? tUi('先配置并保存群机器人的 Webhook') : tUi('先保存配置，再发送到已配置的企业微信群')" :disabled="!dirty && form.enabled && form.webhookConfigured"><span><el-button :loading="testing" :disabled="dirty || !form.enabled || !form.webhookConfigured || saving" @click="sendTest">{{ tUi('发送测试通知') }}</el-button></span></el-tooltip><el-button type="primary" :loading="saving" @click="save">{{ tUi('保存通知配置') }}</el-button></div></div>
     </el-form>
   </section>
 </template>

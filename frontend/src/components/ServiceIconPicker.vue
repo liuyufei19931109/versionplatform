@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, ref } from 'vue'
 import ServiceIcon from './ServiceIcon.vue'
 import { serviceIcon, serviceIcons } from '../serviceIcons'
@@ -11,14 +13,14 @@ function choose(key: string) { emit('update:modelValue', key); open.value = fals
 
 <template>
   <div class="service-icon-picker">
-    <button type="button" class="service-icon-current" aria-label="更换服务图标" @click="open=true"><ServiceIcon :name="modelValue" :service-type="serviceType" :code="code"/><span><b>{{modelValue?selected.label:'自动匹配'}}</b><small>选择内置图标</small></span><span class="service-icon-change">更换</span></button>
-    <small class="service-icon-help">随服务配置保存，在服务列表、打包和发布等页面统一展示。</small>
-    <el-dialog v-model="open" title="选择服务图标" width="min(520px, calc(100vw - 32px))" append-to-body destroy-on-close>
-      <p class="service-icon-intro">20 个内置图标，选定后保存服务配置即可生效。</p>
-      <div class="service-icon-grid" role="group" aria-label="内置服务图标">
-        <button v-for="icon in serviceIcons" :key="icon.key" type="button" :aria-label="'使用'+icon.label+'图标'" :aria-pressed="modelValue===icon.key" :class="{selected:modelValue===icon.key}" @click="choose(icon.key)"><ServiceIcon :name="icon.key"/><span>{{icon.label}}</span></button>
+    <button type="button" class="service-icon-current" :aria-label="tUi('更换服务图标')" @click="open=true"><ServiceIcon :name="modelValue" :service-type="serviceType" :code="code"/><span><b>{{modelValue?selected.label:tUi('自动匹配')}}</b><small>{{ tUi('选择内置图标') }}</small></span><span class="service-icon-change">{{ tUi('更换') }}</span></button>
+    <small class="service-icon-help">{{ tUi('随服务配置保存，在服务列表、打包和发布等页面统一展示。') }}</small>
+    <el-dialog v-model="open" :title="tUi('选择服务图标')" width="min(520px, calc(100vw - 32px))" append-to-body destroy-on-close>
+      <p class="service-icon-intro">{{ tUi('20 个内置图标，选定后保存服务配置即可生效。') }}</p>
+      <div class="service-icon-grid" role="group" :aria-label="tUi('内置服务图标')">
+        <button v-for="icon in serviceIcons" :key="icon.key" type="button" :aria-label="tUi('使用')+icon.label+tUi('图标')" :aria-pressed="modelValue===icon.key" :class="{selected:modelValue===icon.key}" @click="choose(icon.key)"><ServiceIcon :name="icon.key"/><span>{{icon.label}}</span></button>
       </div>
-      <template #footer><el-button @click="choose('')">恢复自动匹配</el-button><el-button @click="open=false">取消</el-button></template>
+      <template #footer><el-button @click="choose('')">{{ tUi('恢复自动匹配') }}</el-button><el-button @click="open=false">{{ tUi('取消') }}</el-button></template>
     </el-dialog>
   </div>
 </template>

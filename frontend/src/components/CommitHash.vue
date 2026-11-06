@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, ref } from 'vue'
 import { Check, CopyDocument } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -23,13 +25,13 @@ async function copy() {
       finally { field.remove(); previous?.focus({ preventScroll: true }) }
     }
     copied.value = true
-    ElMessage.success('已复制完整 Commit')
-  } catch { ElMessage.warning('复制失败，请从悬浮提示中查看完整 Commit') }
+    ElMessage.success(tUi('已复制完整 Commit'))
+  } catch { ElMessage.warning(tUi('复制失败，请从悬浮提示中查看完整 Commit')) }
 }
 </script>
 
 <template>
-  <button v-if="full" type="button" class="commit-hash" :title="full" :aria-label="`复制完整 Commit ${full}`" @click.stop="copy" @mouseleave="copied = false" @blur="copied = false">
+  <button v-if="full" type="button" class="commit-hash" :title="full" :aria-label="tUi('复制完整 Commit {0}', full)" @click.stop="copy" @mouseleave="copied = false" @blur="copied = false">
     <code>{{ shortCommit(full) }}</code><el-icon aria-hidden="true"><Check v-if="copied"/><CopyDocument v-else/></el-icon>
   </button>
   <span v-else class="commit-hash-empty">—</span>

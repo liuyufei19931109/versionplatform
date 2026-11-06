@@ -6,7 +6,7 @@ import ts from 'typescript'
 // Execute the production pure helpers without loading the application's auth or HTTP modules.
 const source = await readFile(new URL('../src/releaseHistory.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
-const { initialEnvironment, rememberEnvironment, historyEnvironmentKey, validServiceId, filterHistory, historyVersions, clampHistoryPage } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { initialEnvironment, rememberEnvironment, historyEnvironmentKey, validServiceId, filterHistory, historyVersions, clampHistoryPage } = await import(`data:text/javascript;base64,${Buffer.from(compiled.replaceAll("'./i18n'", JSON.stringify(new URL('../test-support/i18n.cjs', import.meta.url).href))).toString('base64')}`)
 
 function entry(id, serviceId, environment, artifactId, status = 'SUCCESS', artifactVersion = 'release-20260915') {
   return { task: { id, serviceId, environment, artifactId, status, branch: 'release20260915', commitId: 'aabbccdd', serviceName: '前端服务', serviceKey: 'web-app' }, artifactVersion, buildTaskId: artifactId == null ? null : artifactId + 100, imageReference: null, targetNodeCount: 1, targetScopeKnown: true }

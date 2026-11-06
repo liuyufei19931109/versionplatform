@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { hasMenu } from '../auth'
@@ -24,12 +26,12 @@ function newBuild() {
 </script>
 
 <template>
-  <section class="task-failure-guide" aria-label="失败后的处理建议">
+  <section class="task-failure-guide" :aria-label="tUi('失败后的处理建议')">
     <div><b>{{guide.title}}</b><p>{{guide.hint}}</p><p v-if="retryScope" class="retry-scope">{{retryScope}}</p></div>
     <div class="failure-guide-actions">
-      <el-button type="primary" plain @click="emit('logs')">查看错误日志</el-button>
+      <el-button type="primary" plain @click="emit('logs')">{{ tUi('查看错误日志') }}</el-button>
       <el-button v-if="canRetry && !guide.newBuild" :loading="busy" @click="emit('retry')">{{retryLabel}}</el-button>
-      <el-button v-if="canBuild && (guide.newBuild || guide.alternativeBuild)" :disabled="busy" @click="newBuild">{{productionApp ? '重新选择代码构建生产包' : '用分支最新提交新建打包'}}</el-button>
+      <el-button v-if="canBuild && (guide.newBuild || guide.alternativeBuild)" :disabled="busy" @click="newBuild">{{productionApp ? tUi('重新选择代码构建生产包') : tUi('用分支最新提交新建打包')}}</el-button>
     </div>
   </section>
 </template>

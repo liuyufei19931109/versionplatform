@@ -1,19 +1,19 @@
+const { runWithTranslations, currentLocale, selectLanguage } = require('../test-support/i18n.cjs')
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const fs = require('node:fs')
 const path = require('node:path')
-const vm = require('node:vm')
 const ts = require('typescript')
 
 // Exercise the production normalizer without a browser, API server, or real platform account.
 const source = fs.readFileSync(path.join(__dirname, '../src/api.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
 const mobileModule = { exports: {} }
-vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/mobile.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, mobileModule)
+runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/mobile.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, mobileModule)
 const buildEngineModule = { exports: {} }
-vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/buildEngine.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, buildEngineModule)
+runWithTranslations(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/buildEngine.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, buildEngineModule)
 const sandbox = { exports: {}, require: name => name === './auth' ? { clearAuth() {} } : name === './mobile' ? mobileModule.exports : name === './buildEngine' ? buildEngineModule.exports : require(name) }
-vm.runInNewContext(compiled, sandbox)
+runWithTranslations(compiled, sandbox)
 const { normalizeRelease, normalizeTaskLog, stepLabel } = sandbox.exports
 
 test('App task identity and independent delivery mode survive normalization', () => {
@@ -35,7 +35,7 @@ test('APK task labels and immutable build format are preserved independently of 
 test('legacy App configuration remains AAB while new drafts can explicitly default to APK without fabricated identity', () => {
   const mobileSource = fs.readFileSync(path.join(__dirname, '../src/mobile.ts'), 'utf8')
   const mobileSandbox = { exports: {} }
-  vm.runInNewContext(ts.transpileModule(mobileSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, mobileSandbox)
+  runWithTranslations(ts.transpileModule(mobileSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, mobileSandbox)
   const { mobileBuildDefaults, mobileFormat, isMobileDraft } = mobileSandbox.exports
   assert.equal(mobileFormat({}), 'AAB')
   assert.equal(mobileBuildDefaults().outputFormat, 'AAB')
@@ -119,4 +119,20 @@ test('all supported step labels match platform log labels; unknown steps remain 
   const unknown = normalizeRelease({ id: 1, steps: [{ code: 'CUSTOM', name: '自定义步骤', log: '开始：CUSTOM' }] })
   assert.equal(unknown.steps[0].name, '自定义步骤')
   assert.equal(unknown.steps[0].log, '开始：CUSTOM')
+})
+
+test('changing interface language never changes the original log payload', () => {
+  const previous = currentLocale()
+  const raw = '开始：BUILD_JAR\r\n[demo] 失败：sample\r\n'
+  try {
+    for (const language of ['en', 'es', 'zh-CN']) {
+      selectLanguage(language)
+      const task = normalizeRelease({ id: 5, serviceType: 'FRONTEND', steps: [{ stepType: 'BUILD_JAR', log: raw }] })
+      assert.equal(task.rawLog, raw)
+      assert.equal(task.steps[0].rawLog, raw)
+      assert.ok(task.steps[0].log.includes(stepLabel('BUILD_JAR', 'FRONTEND')))
+      assert.ok(task.steps[0].log.includes('[demo] 失败：sample'))
+      assert.equal(normalizeRelease({ id: 7, logs: raw }).rawLog, raw)
+    }
+  } finally { selectLanguage(previous) }
 })

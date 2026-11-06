@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { onBeforeUnmount, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { errorText, http } from '../api'
@@ -42,7 +44,7 @@ async function save(remove: boolean) {
     else await http.put('/settings/branding/logo', selected.value, { headers: { 'Content-Type': 'image/png' } })
     discard()
     await notifyLogoChange()
-    ElMessage.success(remove ? '已清除平台 Logo' : '已保存平台 Logo')
+    ElMessage.success(remove ? tUi('已清除平台 Logo') : tUi('已保存平台 Logo'))
   } catch (error) { ElMessage.error(errorText(error)) }
   finally { saving.value = false }
 }
@@ -50,20 +52,20 @@ async function save(remove: boolean) {
 
 <template>
   <section class="panel branding-settings" aria-labelledby="branding-title">
-    <h3 id="branding-title">平台 Logo</h3>
-    <p>显示在导航、登录页和浏览器标签页。支持 PNG，最大 256 KiB，宽高均不超过 1024 像素。</p>
+    <h3 id="branding-title">{{ tUi('平台 Logo') }}</h3>
+    <p>{{ tUi('显示在导航、登录页和浏览器标签页。支持 PNG，最大 256 KiB，宽高均不超过 1024 像素。') }}</p>
     <div class="branding-preview">
-      <img v-if="preview || platformLogo" :src="preview || platformLogo" alt="平台 Logo 预览" />
-      <span v-if="preview">待保存的预览</span>
-      <span v-else-if="logoUnavailable">无法读取当前 Logo <el-button link @click="refreshLogo()">重试</el-button></span>
-      <span v-else-if="!platformLogo">未设置 Logo</span>
+      <img v-if="preview || platformLogo" :src="preview || platformLogo" :alt="tUi('平台 Logo 预览')" />
+      <span v-if="preview">{{ tUi('待保存的预览') }}</span>
+      <span v-else-if="logoUnavailable">{{ tUi('无法读取当前 Logo') }} <el-button link @click="refreshLogo()">{{ tUi('重试') }}</el-button></span>
+      <span v-else-if="!platformLogo">{{ tUi('未设置 Logo') }}</span>
     </div>
     <input ref="chooser" type="file" accept="image/png,.png" hidden @change="choose" />
     <div class="branding-actions">
-      <el-button :disabled="saving" @click="chooser?.click()">选择 PNG 图片</el-button>
-      <el-button v-if="selected" type="primary" :loading="saving" @click="save(false)">保存 Logo</el-button>
-      <el-button v-if="selected" :disabled="saving" @click="discard">取消</el-button>
-      <el-button v-else-if="platformLogo || logoUnavailable" :disabled="saving" @click="save(true)">清除 Logo</el-button>
+      <el-button :disabled="saving" @click="chooser?.click()">{{ tUi('选择 PNG 图片') }}</el-button>
+      <el-button v-if="selected" type="primary" :loading="saving" @click="save(false)">{{ tUi('保存 Logo') }}</el-button>
+      <el-button v-if="selected" :disabled="saving" @click="discard">{{ tUi('取消') }}</el-button>
+      <el-button v-else-if="platformLogo || logoUnavailable" :disabled="saving" @click="save(true)">{{ tUi('清除 Logo') }}</el-button>
     </div>
   </section>
 </template>

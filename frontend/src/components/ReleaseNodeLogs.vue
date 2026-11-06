@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http, payload } from '../api'
@@ -34,11 +36,11 @@ async function choose() {
 </script>
 
 <template>
-  <el-button v-if="targets.length" @click="choose">{{failed ? '查看失败节点 #' + failed + ' 日志' : '查看服务日志'}}</el-button>
-  <el-dialog v-model="choosing" title="选择要查看日志的目标节点" width="min(430px, 94vw)" append-to-body>
-    <p v-if="task.status === 'FAILED'" class="node-hint">这条记录未标明失败节点，请选择本次发布的目标机器。</p>
+  <el-button v-if="targets.length" @click="choose">{{failed ? tUi('查看失败节点 #') + failed + tUi(' 日志') : tUi('查看服务日志')}}</el-button>
+  <el-dialog v-model="choosing" :title="tUi('选择要查看日志的目标节点')" width="min(430px, 94vw)" append-to-body>
+    <p v-if="task.status === 'FAILED'" class="node-hint">{{ tUi('这条记录未标明失败节点，请选择本次发布的目标机器。') }}</p>
     <div class="log-node-list">
-      <el-button v-for="id in targets" :key="id" @click="open(id)"><b>节点 #{{id}}</b><span>{{names.get(id)}}</span></el-button>
+      <el-button v-for="id in targets" :key="id" @click="open(id)"><b>{{ tUi('节点 #{0}', id) }}</b><span>{{names.get(id)}}</span></el-button>
     </div>
   </el-dialog>
 </template>

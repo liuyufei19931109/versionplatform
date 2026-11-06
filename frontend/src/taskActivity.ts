@@ -1,3 +1,4 @@
+import { tUi } from './i18n'
 export interface ActivityTask {
   key: string
   eventKey: string
@@ -59,7 +60,7 @@ function normalizeTask(value: unknown): ActivityTask | null {
   return {
     key: raw.key, eventKey: visible ? String(raw.eventKey || '') : '', id: visible && Number.isSafeInteger(raw.id) ? Number(raw.id) : null,
     kind: visible ? String(raw.taskKind || '') : 'OTHER', status, visible,
-    mine: visible && raw.mine === true, serviceName: visible ? String(raw.serviceName || '未命名服务') : '其他任务',
+    mine: visible && raw.mine === true, serviceName: visible ? String(raw.serviceName || tUi('未命名服务')) : tUi('其他任务'),
     serviceId: visible && Number.isSafeInteger(raw.serviceId) ? Number(raw.serviceId) : null,
     serviceType: visible ? String(raw.serviceType || '') : '', createdBy: visible ? String(raw.createdBy || '') : '',
     branch: visible ? String(raw.branch || '') : '', environment: visible ? String(raw.environment || '') : '',
@@ -77,9 +78,9 @@ function normalizeTask(value: unknown): ActivityTask | null {
 
 export function normalizeTaskActivity(value: unknown): TaskActivity {
   const raw = value as (Partial<TaskActivity> & { recentCompletions?: unknown[] }) | null
-  if (!raw || typeof raw !== 'object' || typeof raw.serverTime !== 'string' || !Number.isFinite(Date.parse(raw.serverTime)) || !Array.isArray(raw.pending) || !Array.isArray(raw.runtimePending) || !Array.isArray(raw.recentCompletions) || !('running' in raw) || !Number.isSafeInteger(raw.pendingCount) || Number(raw.pendingCount) < 0) throw new Error('任务状态返回不完整')
+  if (!raw || typeof raw !== 'object' || typeof raw.serverTime !== 'string' || !Number.isFinite(Date.parse(raw.serverTime)) || !Array.isArray(raw.pending) || !Array.isArray(raw.runtimePending) || !Array.isArray(raw.recentCompletions) || !('running' in raw) || !Number.isSafeInteger(raw.pendingCount) || Number(raw.pendingCount) < 0) throw new Error(tUi('任务状态返回不完整'))
   const running = raw.running == null ? null : normalizeTask(raw.running)
-  if (raw.running && !running) throw new Error('执行中任务返回不完整')
+  if (raw.running && !running) throw new Error(tUi('执行中任务返回不完整'))
   return {
     serverTime: raw.serverTime, running,
     runningTasks: Array.isArray(raw.runningTasks) ? raw.runningTasks.map(normalizeTask).filter((item): item is ActivityTask => !!item) : running ? [running] : [],
@@ -93,20 +94,20 @@ export function normalizeTaskActivity(value: unknown): TaskActivity {
 }
 
 export function activityKind(task: Pick<ActivityTask, 'kind' | 'serviceType' | 'visible'>) {
-  if (!task.visible) return '任务'
-  if (task.kind === 'MINIPROGRAM') return '小程序构建'
-  if (task.kind === 'BUILD') return task.serviceType === 'FLUTTER_ANDROID' ? 'App 构建' : '打包'
-  if (task.kind === 'DEPLOY' || task.kind === 'RELEASE') return task.serviceType === 'FLUTTER_ANDROID' ? 'App 交付' : '发布'
-  return ({ RESTART: '更新配置并重启', MERGE: '代码合并', RUNTIME: '运行操作' } as Record<string, string>)[task.kind] || '任务'
+  if (!task.visible) return tUi('任务')
+  if (task.kind === 'MINIPROGRAM') return tUi('小程序构建')
+  if (task.kind === 'BUILD') return task.serviceType === 'FLUTTER_ANDROID' ? tUi('App 构建') : tUi('打包')
+  if (task.kind === 'DEPLOY' || task.kind === 'RELEASE') return task.serviceType === 'FLUTTER_ANDROID' ? tUi('App 交付') : tUi('发布')
+  return ({ RESTART: tUi('更新配置并重启'), MERGE: tUi('代码合并'), RUNTIME: tUi('运行操作') } as Record<string, string>)[task.kind] || tUi('任务')
 }
 
 export function activityElapsed(task: Pick<ActivityTask, 'startedAt' | 'finishedAt'>, now = Date.now()) {
   const start = Date.parse(task.startedAt), finish = task.finishedAt ? Date.parse(task.finishedAt) : now
   if (!Number.isFinite(start) || !Number.isFinite(finish)) return ''
   const seconds = Math.max(0, Math.floor((finish - start) / 1000))
-  if (seconds < 60) return `${seconds} 秒`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`
-  return `${Math.floor(seconds / 3600)} 小时 ${Math.floor(seconds % 3600 / 60)} 分`
+  if (seconds < 60) return tUi('{0} 秒', seconds)
+  if (seconds < 3600) return tUi('{0} 分 {1} 秒', Math.floor(seconds / 60), seconds % 60)
+  return tUi('{0} 小时 {1} 分', Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60))
 }
 
 export function completionKey(task: ActivityTask) { return task.eventKey || `${task.key}:${task.status}:${task.finishedAt}` }

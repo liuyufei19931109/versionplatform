@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue'
 import { errorText, http, payload } from '../api'
 
@@ -59,10 +60,10 @@ export function useArtifactHistory(serviceId: Readonly<Ref<number | null>>) {
       const response = await http.get('/releases/artifact-history', { params: { serviceId: id }, signal: current.signal })
       if (current.signal.aborted) return
       const result = payload<HistoryItem[] | null>(response, null)
-      if (!Array.isArray(result)) throw new Error('发布历史格式异常')
+      if (!Array.isArray(result)) throw new Error(tUi('发布历史格式异常'))
       entries.value = result
     } catch (reason) {
-      if (!current.signal.aborted) error.value = errorText(reason, '暂时无法读取发布历史')
+      if (!current.signal.aborted) error.value = errorText(reason, tUi('暂时无法读取发布历史'))
     } finally {
       if (!current.signal.aborted) loading.value = false
     }
@@ -94,9 +95,9 @@ function validReview(value: DeploymentReview | null, expectedIds: number[] = [])
 }
 
 export function reviewConfirmationLabel(review: DeploymentReview | null) {
-  if (review?.nodes.some(node => node.state === 'ROLLBACK')) return '确认切回此版本'
-  if (review?.nodes.some(node => node.state === 'REPEAT')) return '确认再次发布'
-  return '确认发布到所选节点'
+  if (review?.nodes.some(node => node.state === 'ROLLBACK')) return tUi('确认切回此版本')
+  if (review?.nodes.some(node => node.state === 'REPEAT')) return tUi('确认再次发布')
+  return tUi('确认发布到所选节点')
 }
 
 export function useDeploymentReview(target: Readonly<Ref<ReviewTarget | null>>) {
@@ -126,10 +127,10 @@ export function useDeploymentReview(target: Readonly<Ref<ReviewTarget | null>>) 
       })
       if (current.signal.aborted) return
       const check = payload<DeploymentReview | null>(response, null)
-      if (!validReview(check, value.serverIds)) throw new Error('未能核对所选节点的发布情况，请重新核对')
+      if (!validReview(check, value.serverIds)) throw new Error(tUi('未能核对所选节点的发布情况，请重新核对'))
       result.value = check
     } catch (reason) {
-      if (!current.signal.aborted) error.value = errorText(reason, '暂时无法核对所选节点的发布情况')
+      if (!current.signal.aborted) error.value = errorText(reason, tUi('暂时无法核对所选节点的发布情况'))
     } finally {
       if (!current.signal.aborted) loading.value = false
     }
@@ -142,7 +143,7 @@ export function useDeploymentReview(target: Readonly<Ref<ReviewTarget | null>>) 
     loading.value = false
     const check = response.data?.preflight ?? null
     result.value = validReview(check, target.value?.serverIds) ? check : null
-    error.value = result.value ? '' : '目标状态已变化，请重新核对'
+    error.value = result.value ? '' : tUi('目标状态已变化，请重新核对')
     return true
   }
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tUi } from '../i18n'
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorText, http, payload } from '../api'
@@ -20,7 +22,7 @@ const now = ref(Date.now()), generatedAt = ref(0), generatedSummary = ref(''), r
 let generation = 0, previewGeneration = 0, previewKey = '', previewController: AbortController | undefined, initializing = false
 const clock = window.setInterval(() => { now.value = Date.now() }, 2000)
 const busy = computed(() => loading.value || previewing.value || submitting.value || replacing.value)
-const title = computed(() => props.action === 'edit' ? '编辑版本小结' : props.action === 'reopen' ? '重新打开版本' : '完成版本')
+const title = computed(() => props.action === 'edit' ? tUi('编辑版本小结') : props.action === 'reopen' ? tUi('重新打开版本') : tUi('完成版本'))
 const input = computed<CompletionInput>(() => ({ environment: environment.value, changes: changes.value.trim(), remaining: remaining.value.trim(), exclusions: excluded.value.map(serviceId => ({ serviceId, reason: (reasons.value[serviceId] || '').trim() })) }))
 const inputKey = computed(() => completionInputKey(input.value))
 const validExclusions = computed(() => input.value.exclusions.every(item => item.reason.length > 0))
@@ -41,9 +43,9 @@ async function loadOptions() {
   try {
     const result = payload<CompletionOptions>(await http.get(`/versions/${versionId}/completion/options`, { params: { environment: requestedEnvironment } }), {} as CompletionOptions)
     if (current !== generation || !props.modelValue || props.version?.id !== versionId) return
-    if (result.versionId !== versionId || result.environment !== requestedEnvironment || !Array.isArray(result.items)) throw new Error('版本发布情况与当前选择不一致，请重新读取')
+    if (result.versionId !== versionId || result.environment !== requestedEnvironment || !Array.isArray(result.items)) throw new Error(tUi('版本发布情况与当前选择不一致，请重新读取'))
     options.value = result
-  } catch (failure) { if (current === generation) error.value = errorText(failure, '读取发布情况失败') }
+  } catch (failure) { if (current === generation) error.value = errorText(failure, tUi('读取发布情况失败')) }
   finally { if (current === generation) loading.value = false }
 }
 function toggleExcluded(serviceId: number, value: unknown) { excluded.value = value === true ? [...new Set([...excluded.value, serviceId])] : excluded.value.filter(id => id !== serviceId) }
@@ -63,7 +65,7 @@ async function generate() {
   if (summary.value.trim() && summary.value !== generatedSummary.value) {
     const openedGeneration = generation
     replacing.value = true
-    try { await ElMessageBox.confirm('重新生成会替换你编辑过的草稿。确认后可继续编辑新草稿。', '重新生成小结', { confirmButtonText: '重新生成', cancelButtonText: '保留草稿', type: 'warning', closeOnClickModal: false }) }
+    try { await ElMessageBox.confirm(tUi('重新生成会替换你编辑过的草稿。确认后可继续编辑新草稿。'), tUi('重新生成小结'), { confirmButtonText: tUi('重新生成'), cancelButtonText: tUi('保留草稿'), type: 'warning', closeOnClickModal: false }) }
     catch { replacing.value = false; return }
     replacing.value = false
     if (openedGeneration !== generation || !props.modelValue || !canGenerate.value) return
@@ -73,9 +75,9 @@ async function generate() {
   try {
     const result = payload<CompletionPreview>(await http.post(`/versions/${versionId}/completion/preview`, input.value, { signal: controller.signal }), {} as CompletionPreview)
     if (current !== previewGeneration || !props.modelValue || props.version?.id !== versionId || inputKey.value !== requestedKey) return
-    if (!result.fingerprint || result.versionId !== versionId || !Array.isArray(result.items)) throw new Error('未能生成有效的小结预览，请重新生成')
+    if (!result.fingerprint || result.versionId !== versionId || !Array.isArray(result.items)) throw new Error(tUi('未能生成有效的小结预览，请重新生成'))
     preview.value = result; previewKey = requestedKey; summary.value = result.summary || ''; generatedSummary.value = summary.value; generatedAt.value = Date.now(); now.value = Date.now()
-  } catch (failure) { if (current === previewGeneration) { preview.value = null; error.value = errorText(failure, '生成小结失败') } }
+  } catch (failure) { if (current === previewGeneration) { preview.value = null; error.value = errorText(failure, tUi('生成小结失败')) } }
   finally { if (current === previewGeneration) { previewing.value = false; previewController = undefined } }
 }
 async function save() {
@@ -89,12 +91,12 @@ async function save() {
       : await http.post(url, { ...input.value, summary: summary.value.trim(), fingerprint: preview.value?.fingerprint })
     const detail = payload<CompletionDetail>(response, {} as CompletionDetail)
     if (current !== generation || !props.modelValue || props.version?.id !== versionId) return
-    if (detail.versionId !== versionId || !detail.current?.id || detail.state !== (action === 'reopen' ? 'OPEN' : 'COMPLETED')) throw new Error('提交结果暂时无法确认，请刷新版本详情核对')
+    if (detail.versionId !== versionId || !detail.current?.id || detail.state !== (action === 'reopen' ? 'OPEN' : 'COMPLETED')) throw new Error(tUi('提交结果暂时无法确认，请刷新版本详情核对'))
     emit('saved', detail); emit('update:modelValue', false)
-    ElMessage.success(action === 'reopen' ? '版本已重新打开' : action === 'edit' ? '版本小结已更新' : '版本已完成，小结已向全员展示')
+    ElMessage.success(action === 'reopen' ? tUi('版本已重新打开') : action === 'edit' ? tUi('版本小结已更新') : tUi('版本已完成，小结已向全员展示'))
   } catch (failure) {
     if (current !== generation) return
-    error.value = errorText(failure, '保存版本小结失败，请刷新后核对')
+    error.value = errorText(failure, tUi('保存版本小结失败，请刷新后核对'))
     if (props.action === 'complete') { stale.value = true; preview.value = null }
     emit('refresh')
   } finally { if (current === generation) submitting.value = false }
@@ -107,19 +109,19 @@ onBeforeUnmount(() => { generation++; invalidatePreview(); window.clearInterval(
 
 <template>
   <el-dialog :model-value="modelValue" :title="title" width="900px" class="version-completion-dialog" :close-on-click-modal="false" :close-on-press-escape="!submitting" :show-close="!submitting" @update:model-value="close">
-    <div class="completion-identity"><div><span>版本日期</span><b>{{version?.versionDate}}</b></div><strong>{{version?.branch}}</strong><el-tag v-if="action==='edit'" type="success" effect="plain" size="small">已完成</el-tag></div>
-    <p class="completion-public-note">小结文字与发布数量对所有登录成员可见。服务、分支和发布记录明细仍按原权限查看。</p>
+    <div class="completion-identity"><div><span>{{ tUi('版本日期') }}</span><b>{{version?.versionDate}}</b></div><strong>{{version?.branch}}</strong><el-tag v-if="action==='edit'" type="success" effect="plain" size="small">{{ tUi('已完成') }}</el-tag></div>
+    <p class="completion-public-note">{{ tUi('小结文字与发布数量对所有登录成员可见。服务、分支和发布记录明细仍按原权限查看。') }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="completion-alert"/>
-    <template v-if="action==='reopen'"><p class="completion-reopen-note">重新打开后，版本回到“进行中”，已完成的小结会保留在历史记录中。后续可重新核对发布情况并完成版本。</p><el-form label-position="top"><el-form-item label="重新打开原因" required><el-input v-model="reason" type="textarea" :rows="4" :maxlength="1000" show-word-limit placeholder="例如：本轮需要补充一个模块，完成后重新收尾" aria-label="重新打开原因" :disabled="submitting"/></el-form-item></el-form></template>
+    <template v-if="action==='reopen'"><p class="completion-reopen-note">{{ tUi('重新打开后，版本回到“进行中”，已完成的小结会保留在历史记录中。后续可重新核对发布情况并完成版本。') }}</p><el-form label-position="top"><el-form-item :label="tUi('重新打开原因')" required><el-input v-model="reason" type="textarea" :rows="4" :maxlength="1000" show-word-limit :placeholder="tUi('例如：本轮需要补充一个模块，完成后重新收尾')" :aria-label="tUi('重新打开原因')" :disabled="submitting"/></el-form-item></el-form></template>
     <template v-else>
-      <el-form label-position="top" class="completion-form"><div class="completion-fields"><el-form-item label="收尾环境" required><el-select v-model="environment" :disabled="action==='edit'||busy" aria-label="收尾环境"><el-option label="生产环境" value="prod"/><el-option label="预生产环境" value="test"/><el-option label="开发环境" value="dev"/></el-select></el-form-item><div class="completion-environment-note">{{action==='edit'?'编辑文字会保留原发布快照；如需重新核对，请重新打开版本。':'默认按生产环境收尾；平台会核对该版本分支的实际发布记录。'}}</div></div><el-form-item label="本次更新" required><el-input v-model="changes" type="textarea" :rows="3" :maxlength="4000" show-word-limit placeholder="这一版做了什么？例如：新增搜索筛选，修复登录超时问题。" aria-label="本次更新" :disabled="submitting"/></el-form-item></el-form>
-      <section v-if="action==='complete'" v-loading="loading" class="completion-module-section"><div class="completion-section-heading"><h4>核对模块发布情况</h4><span>{{environmentLabel(environment)}}环境 · {{options?.items.length ?? '—'}} 个模块</span></div><p class="completion-selection-hint">不准备在本轮上线的模块，请勾选“本次不发布”并填写原因。没有确认发布结果的模块会单独列为“待确认”。</p><div class="completion-modules"><article v-for="item in visibleItems" :key="item.serviceId" class="completion-module"><div class="completion-module-top"><ServiceIdentity :service="{...item,displayIcon:version?.items.find(service=>service.serviceId===item.serviceId)?.displayIcon}"/><el-tag :type="completionOutcomeType(item)" size="small" effect="plain">{{excluded.includes(item.serviceId)?'本次不发布':completionOutcomeLabel(item)}}</el-tag></div><div class="completion-module-meta"><strong>{{item.branch}}</strong><CommitHash :value="item.commitId"/><span v-if="item.taskId">发布 #{{item.taskId}}</span><span v-if="item.finishedAt">{{formatTime(item.finishedAt)}}</span></div><p v-if="item.message" class="completion-module-message">{{item.message}}</p><div v-if="item.outcome!=='PUBLISHED'" class="completion-exclusion"><el-checkbox :model-value="excluded.includes(item.serviceId)" :disabled="submitting||previewing" :aria-label="`${item.serviceName}本次不发布`" @update:model-value="toggleExcluded(item.serviceId, $event)">本次不发布</el-checkbox><el-input v-if="excluded.includes(item.serviceId)" v-model="reasons[item.serviceId]" :maxlength="500" :disabled="submitting||previewing" :aria-label="`${item.serviceName}不发布原因`" placeholder="必填：例如本次暂不上线，留待下一版本"/></div></article><p v-if="!loading&&!visibleItems.length" class="completion-empty">{{options?'此版本没有可收尾的模块。':'暂时无法读取模块，请重试。'}}</p></div><el-button v-if="!options&&!loading" :loading="loading" @click="loadOptions">重新读取发布情况</el-button></section>
-      <el-form label-position="top"><el-form-item label="遗留事项" :required="action==='complete'&&unconfirmed>0"><el-input v-model="remaining" type="textarea" :rows="3" :maxlength="4000" show-word-limit :placeholder="unconfirmed?'还有待确认模块，请说明原因或后续安排。':'选填：还有哪些事项需要后续处理？'" aria-label="遗留事项" :disabled="submitting"/></el-form-item></el-form>
-      <p v-if="action==='complete'&&activeRelease" class="completion-validation">该版本在此环境还有排队中或执行中的发布，请等待任务结束后再完成版本。</p><p v-if="action==='complete'&&!validExclusions" class="completion-validation">请填写每个“本次不发布”模块的原因。</p><p v-if="action==='complete'&&unconfirmed&&!remaining.trim()" class="completion-validation">还有 {{unconfirmed}} 个待确认模块，请填写遗留事项，或明确标记为“本次不发布”。</p>
-      <section v-if="preview||summary||action==='edit'" class="completion-draft"><div class="completion-section-heading"><h4>小结草稿</h4><span>{{action==='edit'?'修改后保存为新的修订记录':previewMatches?'结合填写内容与发布情况生成，可继续编辑':'已保留草稿，需重新核对后才能确认'}}</span></div><el-input v-model="summary" type="textarea" :rows="10" :maxlength="8000" show-word-limit aria-label="小结草稿" :disabled="submitting||replacing"/><p v-if="preview" class="completion-preview-counts">本次核对：{{preview.counts.published}} 个已发布 · {{preview.counts.excluded}} 个本次不发布 · {{preview.counts.unconfirmed}} 个待确认。</p></section>
-      <p v-if="stale||expired" class="completion-validation">预览已失效或发布情况可能已变化，请重新生成小结后确认。</p>
+      <el-form label-position="top" class="completion-form"><div class="completion-fields"><el-form-item :label="tUi('收尾环境')" required><el-select v-model="environment" :disabled="action==='edit'||busy" :aria-label="tUi('收尾环境')"><el-option :label="tUi('生产环境')" value="prod"/><el-option :label="tUi('预生产环境')" value="test"/><el-option :label="tUi('开发环境')" value="dev"/></el-select></el-form-item><div class="completion-environment-note">{{action==='edit'?tUi('编辑文字会保留原发布快照；如需重新核对，请重新打开版本。'):tUi('默认按生产环境收尾；平台会核对该版本分支的实际发布记录。')}}</div></div><el-form-item :label="tUi('本次更新')" required><el-input v-model="changes" type="textarea" :rows="3" :maxlength="4000" show-word-limit :placeholder="tUi('这一版做了什么？例如：新增搜索筛选，修复登录超时问题。')" :aria-label="tUi('本次更新')" :disabled="submitting"/></el-form-item></el-form>
+      <section v-if="action==='complete'" v-loading="loading" class="completion-module-section"><div class="completion-section-heading"><h4>{{ tUi('核对模块发布情况') }}</h4><span>{{ tUi('{0}环境 · {1} 个模块', environmentLabel(environment), options?.items.length ?? '—') }}</span></div><p class="completion-selection-hint">{{ tUi('不准备在本轮上线的模块，请勾选“本次不发布”并填写原因。没有确认发布结果的模块会单独列为“待确认”。') }}</p><div class="completion-modules"><article v-for="item in visibleItems" :key="item.serviceId" class="completion-module"><div class="completion-module-top"><ServiceIdentity :service="{...item,displayIcon:version?.items.find(service=>service.serviceId===item.serviceId)?.displayIcon}"/><el-tag :type="completionOutcomeType(item)" size="small" effect="plain">{{excluded.includes(item.serviceId)?tUi('本次不发布'):completionOutcomeLabel(item)}}</el-tag></div><div class="completion-module-meta"><strong>{{item.branch}}</strong><CommitHash :value="item.commitId"/><span v-if="item.taskId">{{ tUi('发布 #{0}', item.taskId) }}</span><span v-if="item.finishedAt">{{formatTime(item.finishedAt)}}</span></div><p v-if="item.message" class="completion-module-message">{{ tUi(item.message) }}</p><div v-if="item.outcome!=='PUBLISHED'" class="completion-exclusion"><el-checkbox :model-value="excluded.includes(item.serviceId)" :disabled="submitting||previewing" :aria-label="tUi('{0}本次不发布', item.serviceName)" @update:model-value="toggleExcluded(item.serviceId, $event)">{{ tUi('本次不发布') }}</el-checkbox><el-input v-if="excluded.includes(item.serviceId)" v-model="reasons[item.serviceId]" :maxlength="500" :disabled="submitting||previewing" :aria-label="tUi('{0}不发布原因', item.serviceName)" :placeholder="tUi('必填：例如本次暂不上线，留待下一版本')"/></div></article><p v-if="!loading&&!visibleItems.length" class="completion-empty">{{options?tUi('此版本没有可收尾的模块。'):tUi('暂时无法读取模块，请重试。')}}</p></div><el-button v-if="!options&&!loading" :loading="loading" @click="loadOptions">{{ tUi('重新读取发布情况') }}</el-button></section>
+      <el-form label-position="top"><el-form-item :label="tUi('遗留事项')" :required="action==='complete'&&unconfirmed>0"><el-input v-model="remaining" type="textarea" :rows="3" :maxlength="4000" show-word-limit :placeholder="unconfirmed?tUi('还有待确认模块，请说明原因或后续安排。'):tUi('选填：还有哪些事项需要后续处理？')" :aria-label="tUi('遗留事项')" :disabled="submitting"/></el-form-item></el-form>
+      <p v-if="action==='complete'&&activeRelease" class="completion-validation">{{ tUi('该版本在此环境还有排队中或执行中的发布，请等待任务结束后再完成版本。') }}</p><p v-if="action==='complete'&&!validExclusions" class="completion-validation">{{ tUi('请填写每个“本次不发布”模块的原因。') }}</p><p v-if="action==='complete'&&unconfirmed&&!remaining.trim()" class="completion-validation">{{ tUi('还有 {0} 个待确认模块，请填写遗留事项，或明确标记为“本次不发布”。', unconfirmed) }}</p>
+      <section v-if="preview||summary||action==='edit'" class="completion-draft"><div class="completion-section-heading"><h4>{{ tUi('小结草稿') }}</h4><span>{{action==='edit'?tUi('修改后保存为新的修订记录'):previewMatches?tUi('结合填写内容与发布情况生成，可继续编辑'):tUi('已保留草稿，需重新核对后才能确认')}}</span></div><el-input v-model="summary" type="textarea" :rows="10" :maxlength="8000" show-word-limit :aria-label="tUi('小结草稿')" :disabled="submitting||replacing"/><p v-if="preview" class="completion-preview-counts">{{ tUi('本次核对：{0} 个已发布 · {1} 个本次不发布 · {2} 个待确认。', preview.counts.published, preview.counts.excluded, preview.counts.unconfirmed) }}</p></section>
+      <p v-if="stale||expired" class="completion-validation">{{ tUi('预览已失效或发布情况可能已变化，请重新生成小结后确认。') }}</p>
     </template>
-    <template #footer><div class="completion-footer"><span>{{action==='complete'?'完成版本只登记收尾，不会执行部署或代码合并。':action==='edit'?'修改文字会保留历史修订和原发布快照。':'重新打开会记录原因及操作人。'}}</span><div><el-button :disabled="submitting||replacing" @click="close()">取消</el-button><el-button v-if="action==='complete'" :loading="previewing" :disabled="!canGenerate" :type="summary?'default':'primary'" @click="generate">{{summary?'重新生成小结':'生成小结'}}</el-button><el-button v-if="preview||summary||action!=='complete'" type="primary" :loading="submitting" :disabled="!canSave" @click="save">{{action==='edit'?'保存小结':action==='reopen'?'确认重新打开':'确认完成'}}</el-button></div></div></template>
+    <template #footer><div class="completion-footer"><span>{{action==='complete'?tUi('完成版本只登记收尾，不会执行部署或代码合并。'):action==='edit'?tUi('修改文字会保留历史修订和原发布快照。'):tUi('重新打开会记录原因及操作人。')}}</span><div><el-button :disabled="submitting||replacing" @click="close()">{{ tUi('取消') }}</el-button><el-button v-if="action==='complete'" :loading="previewing" :disabled="!canGenerate" :type="summary?'default':'primary'" @click="generate">{{summary?tUi('重新生成小结'):tUi('生成小结')}}</el-button><el-button v-if="preview||summary||action!=='complete'" type="primary" :loading="submitting" :disabled="!canSave" @click="save">{{action==='edit'?tUi('保存小结'):action==='reopen'?tUi('确认重新打开'):tUi('确认完成')}}</el-button></div></div></template>
   </el-dialog>
 </template>
 

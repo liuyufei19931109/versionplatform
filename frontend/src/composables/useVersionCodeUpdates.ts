@@ -1,3 +1,4 @@
+import { tUi } from '../i18n'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { hasMenu } from '../auth'
 import { errorText, http, payload } from '../api'
@@ -16,7 +17,7 @@ export function useVersionCodeUpdates(versionId: () => number | undefined) {
       const result = normalizeCodeUpdates(payload(await http.get(`/versions/${id}/code-updates`, { signal: pending.signal }), null))
       if (disposed || request !== generation || versionId() !== id) return
       enabled.value = result.enabled; items.value = result.items; error.value = ''
-    } catch (reason) { if (!disposed && request === generation) error.value = errorText(reason, '代码动态暂时无法读取') }
+    } catch (reason) { if (!disposed && request === generation) error.value = errorText(reason, tUi('代码动态暂时无法读取')) }
     finally { if (!disposed && request === generation) { loading.value = false; controller = undefined; timer = setTimeout(refresh, 20000) } }
   }
   watch([versionId, () => hasMenu('versions')], () => { stop(); enabled.value = false; items.value = []; error.value = ''; loading.value = false; void refresh() }, { immediate: true, flush: 'sync' })
