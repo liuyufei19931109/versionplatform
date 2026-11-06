@@ -1,42 +1,45 @@
-# Release Platform
+<h1 align="center">Release Platform</h1>
 
-[![Build and test status](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml) · [简体中文](README.md) · **English** · [Español](README.es.md)
+<p align="center"><strong>A self-hosted release workspace, from Git commit to production</strong><br>
+Pin a commit when you build, review the artifact and targets before deployment, and see the outcome on each node.</p>
 
-**A self-hosted workspace for building applications, deploying services, and checking what shipped in each release.**
+<p align="center">
+  <a href="https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml"><img src="https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml/badge.svg?branch=main" alt="Build and test status"></a>
+  &nbsp; <code>0.1.0-preview.1</code> · Source preview · <a href="LICENSE">MIT</a>
+</p>
 
-[Quick start](docs/quickstart.en.md) · [Connect your first service](docs/first-service.en.md) · [User guide](docs/user-guide.en.md) · [Project checks](.github/workflows/checks.yml)
+<p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="README.es.md">Español</a></p>
 
-Before a deployment, see the selected commit, artifact, and target nodes. Afterwards, open the same record to see who started it, which nodes passed their health checks, and where a failed task stopped.
+<p align="center"><strong><a href="docs/quickstart.en.md">Quick start</a></strong> &nbsp;·&nbsp; <a href="docs/first-service.en.md">Connect your first service</a> &nbsp;·&nbsp; <a href="docs/user-guide.en.md">User guide</a></p>
 
-- **Trace a build.** Select a branch and commit, then follow the build steps, logs, and resulting artifact.
-- **Promote a tested artifact.** Review each target's deployment history. Production deployments require staging verification and the operator's own one-time code. Select a previous artifact to redeploy it.
-- **Review a release across modules.** Group frontend, backend, and Flutter Android modules in one release plan. Services report deployment and health-check results. Android delivery uses an acknowledgment from the distributor. The release summary records what shipped, what was deferred, and what still needs confirmation.
+![Release dashboard with sample deployment records, target environments and operators](docs/assets/workspace-demo.en.png)
 
-**Current version** `0.1.0-preview.1` · Source preview. The interface supports English, Spanish, and Simplified Chinese. Start in an isolated test environment.
+*Workspace preview · All services, people, and deployment records shown here are fictional.*
 
-## Quick start
+## What to check during a release
 
-Install JDK 21, Maven 3.9, and Node.js 22 or 24, then download or clone this repository. The local preview uses H2. You can explore it before connecting a deployment server, a container registry, or an app signing key.
-
-1. In a terminal at the repository root, build the backend, choose an initial administrator password, and start the instance in a dedicated data directory.
-2. In a second terminal, install the dependencies in the `frontend/` directory and start the frontend with its proxy pointing to the local backend.
-3. Open the local URL shown in the terminal. Sign in as `admin` and pair an authenticator app when prompted.
-
-**[Follow the full setup instructions for Windows, macOS, or Linux](docs/quickstart.en.md)**
-
-## Workspace preview
-
-![Release dashboard with sample services, deployment records, and the execution queue](docs/assets/workspace-demo.en.png)
-
-*All services, people, and records in this screenshot are fictional.*
-
-## Where to go next
-
-| What you want to do | Read this |
+| Stage | What you can verify |
 | --- | --- |
-| Deploy your first test service | [Connect your first service](docs/first-service.en.md) |
-| Start a build, review targets, check deployment history, or roll back | [User guide](docs/user-guide.en.md) |
-| Configure storage or upload a logo | [Instance configuration (in Chinese)](docs/source-baseline.md) |
-| Follow plans for generic Dockerfile builds, external CI images, and connection checks | [Roadmap (in Chinese)](docs/roadmap.md) |
-| Contribute code, translations, or a bug report | [Contributing (in Chinese)](CONTRIBUTING.md) |
-| Report a security issue privately | [Security policy (in Chinese)](SECURITY.md) |
+| Build | Select a branch and commit, follow the build steps and logs, and find the artifact produced by a successful build. |
+| Promote to production | Review staging verification and the last deployment on each target node. The operator confirms the production deployment with their own one-time code. |
+| Review the result | Check health results by node and inspect failed steps. To roll back, select an earlier artifact and deploy it again. |
+
+A release plan can include frontend, backend, and Flutter Android modules. Services report deployment results by node. Android delivery is confirmed by the distributor. The release summary records what shipped, what was deferred, and what still needs confirmation.
+
+## Try it locally
+
+Install **JDK 21, Maven 3.9, and Node.js 22 or 24**. The local preview uses H2. You can sign in, pair an authenticator, and explore the workspace before connecting a separate test server.
+
+1. From the repository root, build the backend and set the initial administrator password.
+2. In a second terminal, install the dependencies in `frontend/` and start the frontend.
+3. Open the local URL and sign in as `admin`. Use the selector at the top right of the sign-in page to choose English, Spanish, or Simplified Chinese.
+
+[View setup commands for your operating system →](docs/quickstart.en.md)
+
+## Documentation and contact
+
+[Instance settings and logo (Chinese)](docs/source-baseline.md) · [Roadmap (Chinese)](docs/roadmap.md) · [Contributing (Chinese)](CONTRIBUTING.md) · [Security policy (Chinese)](SECURITY.md)
+
+**Maintainer**　[liuyufei19931109](https://github.com/liuyufei19931109) · [liuyufei@midatia.cn](mailto:liuyufei@midatia.cn)
+
+Email the maintainer to discuss the project or a collaboration. For reproducible bugs and feature requests, use [GitHub Issues](https://github.com/liuyufei19931109/versionplatform/issues).
