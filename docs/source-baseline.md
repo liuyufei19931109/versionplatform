@@ -1,6 +1,6 @@
 # 源码说明
 
-开源预览包含 Java 21 / Spring Boot 后端、Vue 3 / TypeScript 前端、构建清单、依赖锁文件和本地测试。后端运行资源随 JAR 打包；前端由 Vite 生成静态资源。首版的实施顺序见[改造清单](../README.md)。
+开源预览包含 Java 21 / Spring Boot 后端、Vue 3 / TypeScript 前端、构建清单、依赖锁文件和本地测试。后端运行资源随 JAR 打包；前端由 Vite 生成静态资源。首版的实施顺序见[首版路线图](roadmap.md)。
 
 ## 实例配置
 
