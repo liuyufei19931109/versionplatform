@@ -1,6 +1,6 @@
 # Release Platform
 
-[简体中文](README.md) · **English** · [Español](README.es.md)
+[![Build and test status](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml) · [简体中文](README.md) · **English** · [Español](README.es.md)
 
 **A self-hosted workspace for building applications, deploying services, and checking what shipped in each release.**
 

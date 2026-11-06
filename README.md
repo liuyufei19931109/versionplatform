@@ -1,6 +1,6 @@
 # 发版平台
 
-**简体中文** · [English](README.en.md) · [Español](README.es.md)
+[![自动检查状态](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml) · **简体中文** · [English](README.en.md) · [Español](README.es.md)
 
 **一个自托管的发布工作台，供团队构建应用、部署服务，并核对每个版本的交付结果。**
 

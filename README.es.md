@@ -1,6 +1,6 @@
 # Plataforma de despliegue
 
-[简体中文](README.md) · [English](README.en.md) · **Español**
+[![Estado de las comprobaciones](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/liuyufei19931109/versionplatform/actions/workflows/checks.yml) · [简体中文](README.md) · [English](README.en.md) · **Español**
 
 **Una herramienta que puedes alojar en tu propia infraestructura para compilar aplicaciones, desplegar servicios y comprobar qué se ha publicado en cada versión.**
 
