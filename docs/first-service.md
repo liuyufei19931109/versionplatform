@@ -1,5 +1,9 @@
 # 接入第一个服务
 
+**简体中文** · [English](first-service.en.md) · [Español](first-service.es.md)
+
+如果还没有启动平台，请先完成[本地快速开始](quickstart.md)。
+
 本例把一个 Node HTTP 服务发布到独立的 Linux 预生产节点。完成后，你能从发版记录找到构建的 Commit、镜像版本、目标节点和健康检查结果。文中的 `.invalid` 域名均为占位符，请换成自己的测试资源。
 
 ## 1. 准备三处资源

@@ -1,5 +1,7 @@
 # 日常使用指南
 
+**简体中文** · [English](user-guide.en.md) · [Español](user-guide.es.md)
+
 平台按**服务 → 构建任务 → 制品 → 发布记录**组织工作。想从零跑第一单，可先按[接入第一个服务](first-service.md)配置一个独立的预生产节点。
 
 ## 按角色使用

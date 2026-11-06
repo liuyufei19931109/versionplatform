@@ -1,0 +1,36 @@
+# Guía de uso
+
+[简体中文](user-guide.md) · [English](user-guide.en.md) · **Español**
+
+El punto de partida es el **servicio**. Una **tarea de compilación** genera un **artefacto**, y cada despliegue de ese artefacto deja un **registro de despliegue**. Para hacer tu primer despliegue, prepara un nodo independiente de preproducción siguiendo la guía [Conectar tu primer servicio](first-service.es.md).
+
+## Por dónde empezar
+
+| Tarea | Dónde hacerlo |
+| --- | --- |
+| Configurar cuentas y conceder acceso | El administrador gestiona los usuarios y sus permisos de menú en **Configuración general**. La primera vez que inicia sesión, cada usuario abre **Seguridad de acceso**, elige **Iniciar vinculación**, escanea el código QR e introduce los seis dígitos que muestra su propio autenticador. |
+| Conectar el repositorio, los entornos y los nodos | En **Servicios**, configura el repositorio, el método de compilación y los entornos que quieras habilitar. En **Servidores**, configura el acceso SSH y el proyecto de Compose remoto. Concede permiso para modificar los comandos de compilación o arranque solo a personas de confianza, ya que esos comandos se ejecutan en el equipo de compilación o en el nodo de destino. |
+| Compilar una versión | En **Nueva compilación**, selecciona el servicio y la rama y comprueba el commit. **Solo compilar** conserva el artefacto para más adelante. Si eliges un destino de desarrollo o preproducción, el despliegue pasa automáticamente a la cola cuando la compilación termina correctamente. La tarea sigue en curso aunque cierres la página. |
+| Desplegar una compilación anterior | En **Nuevo despliegue**, elige **un artefacto generado por una compilación correcta de ese servicio en la plataforma**. Selecciona el entorno y comprueba la lista de nodos de destino. El asistente te pedirá que la revises de nuevo si ya existe una tarea de despliegue o has seleccionado una versión anterior. |
+| Consultar una tarea o comprobar el estado de un servicio | **Historial de compilaciones** e **Historial de despliegues** muestran los pasos, los registros, la persona responsable y el resultado de cada tarea. En **Estado de los servicios** puedes comprobar el contenedor y la imagen de cada nodo. Abre **Registros del servicio** para leer los archivos de registro de la aplicación o la salida estándar del contenedor. |
+
+## Elegir el método de compilación
+
+- **Servicios de backend.** En una compilación local, el equipo ejecuta primero el comando configurado para compilar la aplicación y después genera la imagen con el Dockerfile del repositorio. Instala el JDK y Maven que requiera el comando o las herramientas de Gradle que utilice el proyecto. Docker debe poder crear imágenes en ese equipo y subirlas al registro.
+- **Servicios de frontend.** Puedes compilar un sitio estático o usar el Dockerfile del repositorio. Para un sitio estático, el equipo ejecuta el comando de compilación de Node.js del proyecto y empaqueta el resultado en una imagen de Nginx. Con el Dockerfile del repositorio, las dependencias se instalan y la aplicación se compila durante la creación de la imagen.
+- **Flutter para Android.** Registra la aplicación en **Distribución de aplicaciones**. En los ajustes de compilación, configura por entorno el nombre del paquete, la firma, la versión de Flutter y los parámetros opcionales. Para compilar localmente, prepara Flutter, el SDK de Android, el JDK, el material de firma y las herramientas de verificación. Para la distribución externa, descarga el APK o AAB fijado para esa entrega, distribúyelo y confirma el resultado una vez terminada la distribución.
+- Esta versión preliminar incluye el código fuente de la plataforma. Para compilar en la nube con GitHub, debes preparar por separado un repositorio de compilación, sus flujos de trabajo y los permisos correspondientes. Los miniprogramas están desactivados por defecto. Están previstos los servicios genéricos con Dockerfile, el registro de imágenes generadas por sistemas de CI externos y las comprobaciones de la configuración inicial.
+
+## Desplegar en producción o volver a una versión anterior
+
+1. Antes de desplegar un artefacto por primera vez en producción, despliega **ese mismo artefacto** en preproducción y espera a que los nodos superen las comprobaciones de estado. Para pasar a producción, el artefacto debe haber superado la preproducción o haberse desplegado correctamente en producción con anterioridad.
+2. En **Historial de despliegues**, parte de un despliegue correcto de preproducción, o selecciona el artefacto en **Nuevo despliegue**. Revisa el servicio, la versión, el entorno de producción y los nodos. Confirma con el código del autenticador vinculado a **la cuenta con la que has iniciado sesión**. Si falla la tarea de producción, debes volver a verificar tu identidad antes de reintentarla.
+3. Para volver a una versión anterior, selecciona el artefacto de un despliegue que terminó correctamente y comprueba qué nodos de producción deben recuperar esa versión. Conserva en el registro las etiquetas históricas y las imágenes a las que apuntan. Si sobrescribes una etiqueta o borras la imagen, podrías impedir la recuperación. Esta versión descarga las imágenes por su referencia. El despliegue por digest inmutable está previsto para una versión posterior.
+4. El historial refleja el resultado de una operación concreta. Para saber qué imagen está ejecutando un nodo **ahora**, vuelve a comprobarlo en **Estado de los servicios**. Al cancelar una tarea en ejecución se detienen los pasos siguientes. Comprueba en el nodo qué cambios ya se han aplicado.
+
+## Tareas habituales
+
+- **Recuperar una compilación fallida.** Busca el primer paso que falló en los detalles de la tarea. Si la red o el repositorio sufrieron una interrupción temporal, reintenta la tarea cuando vuelva a haber acceso. Si has cambiado el código fuente, abre **Nueva compilación** y selecciona y confirma el commit más reciente.
+- **Comprobar versiones y ramas.** En **Versiones** puedes asociar varios servicios con sus ramas de versión. La planificación toma la rama remota `master` como referencia. La compilación vuelve a comprobar esa referencia. La fusión automática de los cambios en `master` tras el despliegue en producción está desactivada por defecto. Si la activas, concede por separado el permiso de escritura en Git y comprueba el resultado de la fusión.
+- **Consultar registros y recargar la configuración.** **Estado de los servicios** consulta los nodos bajo demanda. **Actualizar configuración y reiniciar** lee la configuración actual de Compose y del entorno en el servidor y vuelve a crear el servicio seleccionado con la imagen que ya tenía. Esto causa una breve interrupción. Comprueba antes el contenedor de destino. En producción también debes confirmar con un código del autenticador.
+- **Guardar los datos de ejecución.** Separa las credenciales de los registros de imágenes, las claves SSH, los directorios de datos y los espacios de nombres de las imágenes de pruebas y de producción. Guarda una copia conjunta de la base de datos, la clave de cifrado de credenciales y la clave de cifrado del autenticador para poder restaurarlas como un conjunto. Mantén los datos de ejecución, los archivos de firma, las copias de seguridad y los registros reales fuera del repositorio de código.

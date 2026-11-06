@@ -1,8 +1,10 @@
 # Release Platform
 
+[简体中文](README.md) · **English** · [Español](README.es.md)
+
 **A self-hosted workspace for building applications, deploying services, and checking what shipped in each release.**
 
-[简体中文](README.md) · English · [Español](README.es.md)　|　[Local setup (中文)](docs/quickstart.md) · [Connect a service (中文)](docs/first-service.md) · [User guide (中文)](docs/user-guide.md) · [Project checks](.github/workflows/checks.yml)
+[Quick start](docs/quickstart.en.md) · [Connect your first service](docs/first-service.en.md) · [User guide](docs/user-guide.en.md) · [Project checks](.github/workflows/checks.yml)
 
 Before a deployment, see the selected commit, artifact, and target nodes. Afterwards, open the same record to see who started it, which nodes passed their health checks, and where a failed task stopped.
 
@@ -14,40 +16,27 @@ Before a deployment, see the selected commit, artifact, and target nodes. Afterw
 
 ## Quick start
 
-Install JDK 21, Maven 3.9, and Node.js 22 or 24. Download or clone the repository, then open two terminals at its root. The local preview uses an H2 database and can start without access to your application servers.
+Install JDK 21, Maven 3.9, and Node.js 22 or 24, then download or clone this repository. The local preview uses H2. You can explore it before connecting a deployment server, a container registry, or an app signing key.
 
-In the first terminal, start the backend. The Bash example prompts for the initial administrator password without printing it. Use at least 12 characters and at most 72 UTF-8 bytes.
+1. In a terminal at the repository root, build the backend, choose an initial administrator password, and start the instance in a dedicated data directory.
+2. In a second terminal, install the dependencies in the `frontend/` directory and start the frontend with its proxy pointing to the local backend.
+3. Open the local URL shown in the terminal. Sign in as `admin` and pair an authenticator app when prompted.
 
-```bash
-repo="$(pwd)"
-mvn -f backend/pom.xml -DskipTests package && (
-  set -e
-  umask 077
-  instance="$HOME/.local/share/release-platform-preview"
-  mkdir -p "$instance"
-  cd "$instance"
-  read -r -s -p 'Initial admin password: ' RELEASE_BOOTSTRAP_ADMIN_PASSWORD
-  printf '\n'
-  export RELEASE_BOOTSTRAP_ADMIN_PASSWORD
-  java -jar "$repo/backend/target/release-platform-0.1.0-preview.1.jar" \
-    --server.address=127.0.0.1 --server.port=8080 --release.workspace=./workspaces
-)
-```
-
-In the second terminal, start the frontend.
-
-```bash
-cd frontend
-npm ci
-VITE_API_PROXY=http://127.0.0.1:8080 npm run dev -- --host 127.0.0.1 --strictPort
-```
-
-Open `http://127.0.0.1:5173`, sign in as `admin` with the password you chose, and pair an authenticator app. On Windows, follow the [PowerShell instructions (中文)](docs/quickstart.md). You can change the interface language before signing in.
+**[Follow the full setup instructions for Windows, macOS, or Linux](docs/quickstart.en.md)**
 
 ## Workspace preview
 
-![Release dashboard with sample services, deployment records, and the execution queue](docs/assets/workspace-demo.png)
+![Release dashboard with sample services, deployment records, and the execution queue](docs/assets/workspace-demo.en.png)
 
 *All services, people, and records in this screenshot are fictional.*
 
-Generic Dockerfile builds, registration of images from external CI, and first-time connection checks are on the [roadmap (中文)](docs/roadmap.md). See the [contribution guide](CONTRIBUTING.md) and [security policy](SECURITY.md) before opening a report.
+## Where to go next
+
+| What you want to do | Read this |
+| --- | --- |
+| Deploy your first test service | [Connect your first service](docs/first-service.en.md) |
+| Start a build, review targets, check deployment history, or roll back | [User guide](docs/user-guide.en.md) |
+| Configure storage or upload a logo | [Instance configuration (in Chinese)](docs/source-baseline.md) |
+| Follow plans for generic Dockerfile builds, external CI images, and connection checks | [Roadmap (in Chinese)](docs/roadmap.md) |
+| Contribute code, translations, or a bug report | [Contributing (in Chinese)](CONTRIBUTING.md) |
+| Report a security issue privately | [Security policy (in Chinese)](SECURITY.md) |

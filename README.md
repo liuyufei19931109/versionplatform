@@ -1,8 +1,10 @@
 # 发版平台
 
+**简体中文** · [English](README.en.md) · [Español](README.es.md)
+
 **一个自托管的发布工作台，供团队构建应用、部署服务，并核对每个版本的交付结果。**
 
-简体中文 · [English](README.en.md) · [Español](README.es.md)　|　[快速开始](docs/quickstart.md) · [接入第一个服务](docs/first-service.md) · [使用手册](docs/user-guide.md) · [项目检查](.github/workflows/checks.yml)
+[快速开始](docs/quickstart.md) · [接入第一个服务](docs/first-service.md) · [使用手册](docs/user-guide.md) · [项目检查](.github/workflows/checks.yml)
 
 发版前，你可以看到这次选的是哪个提交、哪个制品、要发到哪些节点。发版后，团队可以从同一条记录查到谁发起了操作、哪些节点通过了健康检查，以及失败发生在哪一步。
 
