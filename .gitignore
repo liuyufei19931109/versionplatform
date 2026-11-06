@@ -1,0 +1,61 @@
+# Package caches and build output
+node_modules/
+.vite/
+dist/
+target/
+coverage/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# Local settings, credentials and signing material
+.env
+.env.*
+*.env
+!.env.example
+!.env.*.example
+.npmrc
+settings.xml
+.ssh/
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.kdbx
+*.private.json
+
+# Instance data and local workspaces
+data/
+workspaces/
+backups/
+mobile-artifacts/
+*.db
+*.db.*
+*.sqlite*
+*.log
+*.pid
+
+# Verification output and packaged artifacts
+verification/
+visual-check/
+test-results/
+playwright-report/
+*.jar
+*.war
+*.class
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.apk
+*.aab
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

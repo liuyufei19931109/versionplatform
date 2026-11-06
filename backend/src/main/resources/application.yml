@@ -1,0 +1,123 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  application:
+    name: release-platform
+  datasource:
+    url: jdbc:h2:file:${RELEASE_DATA_DIR:./data}/release-platform;MODE=MySQL;AUTO_SERVER=FALSE;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+release:
+  bootstrap-admin-password: ${RELEASE_BOOTSTRAP_ADMIN_PASSWORD:}
+  # Completed shutdown snapshots include a database ZIP and copies of existing encryption keys.
+  shutdown-backup-dir: ${RELEASE_SHUTDOWN_BACKUP_DIR:${RELEASE_DATA_DIR:./data}/backups}
+  force-simulate: ${RELEASE_FORCE_SIMULATE:false}
+  # Optional registry prefix for services without an explicit image repository.
+  registry-prefix: ${RELEASE_REGISTRY_PREFIX:}
+  registry-server: ${RELEASE_REGISTRY_SERVER:}
+  registry-username: ${RELEASE_REGISTRY_USERNAME:}
+  registry-password: ${RELEASE_REGISTRY_PASSWORD:}
+  push-max-attempts: ${RELEASE_PUSH_MAX_ATTEMPTS:3}
+  push-retry-delay-ms: ${RELEASE_PUSH_RETRY_DELAY_MS:3000}
+  # Keep checked-out service code outside backend/.mvn so Maven does not inherit
+  # the release platform's own project-local Maven configuration.
+  workspace: ${RELEASE_WORKSPACE:../workspaces}
+  command-timeout-seconds: ${RELEASE_COMMAND_TIMEOUT_SECONDS:600}
+  ssh:
+    # Managed by operations; the web UI can reference aliases, never edit ProxyCommand.
+    config-file: ${RELEASE_SSH_CONFIG_FILE:/opt/release-platform/ssh/config}
+  branch-policy-workspace: ${RELEASE_BRANCH_POLICY_WORKSPACE:${RELEASE_DATA_DIR:./data}/git-policy}
+  version-workspace: ${RELEASE_VERSION_WORKSPACE:${RELEASE_DATA_DIR:./data}/git-versions}
+  github:
+    webhook-enabled: ${RELEASE_GITHUB_WEBHOOK_ENABLED:false}
+    webhook-secret: ${RELEASE_GITHUB_WEBHOOK_SECRET:}
+    owner: ${RELEASE_GITHUB_OWNER:}
+    workspace: ${RELEASE_GITHUB_WORKSPACE:${RELEASE_DATA_DIR:./data}/github-observations}
+  production-merge-enabled: ${RELEASE_PRODUCTION_MERGE_ENABLED:false}
+  # Local development only until explicitly enabled. Upload is a separate opt-in.
+  miniprogram:
+    enabled: ${RELEASE_MINIPROGRAM_ENABLED:false}
+    upload-enabled: ${RELEASE_MINIPROGRAM_UPLOAD_ENABLED:false}
+    workspace: ${RELEASE_MINIPROGRAM_WORKSPACE:${release.workspace}/miniprograms}
+    key-root: ${RELEASE_MINIPROGRAM_KEY_ROOT:}
+    ci-home: ${RELEASE_MINIPROGRAM_CI_HOME:}
+    node: ${RELEASE_MINIPROGRAM_NODE:node}
+    timeout-seconds: ${RELEASE_MINIPROGRAM_TIMEOUT_SECONDS:600}
+  backend:
+    build-engine: ${RELEASE_BACKEND_BUILD_ENGINE:local}
+    service-keys: ${RELEASE_BACKEND_SERVICE_KEYS:}
+    github:
+      repository: ${RELEASE_BACKEND_GITHUB_REPOSITORY:}
+      workflow: ${RELEASE_BACKEND_GITHUB_WORKFLOW:release-backend-build.yml}
+      ref: ${RELEASE_BACKEND_GITHUB_REF:main}
+      token-file: ${RELEASE_BACKEND_GITHUB_TOKEN_FILE:${release.mobile.github.token-file:}}
+      java-version: ${RELEASE_BACKEND_GITHUB_JAVA_VERSION:21}
+      heap-mib: ${RELEASE_BACKEND_GITHUB_HEAP_MIB:2048}
+      total-timeout-seconds: ${RELEASE_BACKEND_GITHUB_TOTAL_TIMEOUT_SECONDS:1800}
+      poll-seconds: ${RELEASE_BACKEND_GITHUB_POLL_SECONDS:10}
+  frontend:
+    build-engine: ${RELEASE_FRONTEND_BUILD_ENGINE:local}
+    service-keys: ${RELEASE_FRONTEND_SERVICE_KEYS:}
+    github:
+      repository: ${RELEASE_FRONTEND_GITHUB_REPOSITORY:}
+      workflow: ${RELEASE_FRONTEND_GITHUB_WORKFLOW:release-frontend-build.yml}
+      ref: ${RELEASE_FRONTEND_GITHUB_REF:main}
+      token-file: ${RELEASE_FRONTEND_GITHUB_TOKEN_FILE:${release.mobile.github.token-file:}}
+      node-version: ${RELEASE_FRONTEND_GITHUB_NODE_VERSION:22}
+      heap-mib: ${RELEASE_FRONTEND_GITHUB_HEAP_MIB:6144}
+      total-timeout-seconds: ${RELEASE_FRONTEND_GITHUB_TOTAL_TIMEOUT_SECONDS:1800}
+      poll-seconds: ${RELEASE_FRONTEND_GITHUB_POLL_SECONDS:10}
+  mobile:
+    # New tasks snapshot this choice. Existing local/cloud tasks keep their original engine.
+    build-engine: ${RELEASE_MOBILE_BUILD_ENGINE:local}
+    github:
+      repository: ${RELEASE_MOBILE_GITHUB_REPOSITORY:}
+      workflow: ${RELEASE_MOBILE_GITHUB_WORKFLOW:release-mobile-build.yml}
+      ref: ${RELEASE_MOBILE_GITHUB_REF:main}
+      token-file: ${RELEASE_MOBILE_GITHUB_TOKEN_FILE:}
+      total-timeout-seconds: ${RELEASE_MOBILE_GITHUB_TOTAL_TIMEOUT_SECONDS:3600}
+      poll-seconds: ${RELEASE_MOBILE_GITHUB_POLL_SECONDS:10}
+    flutter-root: ${RELEASE_MOBILE_FLUTTER_ROOT:}
+    android-sdk: ${RELEASE_MOBILE_ANDROID_SDK:}
+    java-home: ${RELEASE_MOBILE_JAVA_HOME:}
+    bundletool-jar: ${RELEASE_MOBILE_BUNDLETOOL_JAR:}
+    apksigner-path: ${RELEASE_MOBILE_APKSIGNER_PATH:}
+    apkanalyzer-path: ${RELEASE_MOBILE_APKANALYZER_PATH:}
+    artifact-root: ${RELEASE_MOBILE_ARTIFACT_ROOT:${RELEASE_DATA_DIR:./data}/mobile-artifacts}
+    signing-root: ${RELEASE_MOBILE_SIGNING_ROOT:}
+  storage:
+    # Only newly completed builds are eligible. Keep shared dependency/BuildKit caches.
+    cleanup-successful-builds: ${RELEASE_CLEANUP_SUCCESSFUL_BUILDS:true}
+    registry-timeout-seconds: ${RELEASE_STORAGE_REGISTRY_TIMEOUT_SECONDS:30}
+    # Retry only this feature's pending journals, never scan historic tasks for deletion.
+    pending-retries-per-build: ${RELEASE_STORAGE_PENDING_RETRIES_PER_BUILD:2}
+  step-delay-ms: ${RELEASE_STEP_DELAY_MS:350}
+  executor:
+    cloud-build-concurrency: ${RELEASE_CLOUD_BUILD_CONCURRENCY:0}
+    core-pool-size: ${RELEASE_EXECUTOR_CORE_POOL_SIZE:1}
+    max-pool-size: ${RELEASE_EXECUTOR_MAX_POOL_SIZE:1}
+    queue-capacity: ${RELEASE_EXECUTOR_QUEUE_CAPACITY:100}
+logging:
+  level:
+    org.hibernate.SQL: warn
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/release_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
